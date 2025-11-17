@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+@import './variables.css';
+@import './base.css';
+
+html, body {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+#app {
+  min-height: 100vh;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--regular);
+  width: 100%;
+}
+
+.container {
+  display: block !important;
+  width: 100% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+@media (min-width: 96rem) {
+  .container {
+    max-width: 96rem !important;
+  }
+}
