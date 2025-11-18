@@ -71,7 +71,7 @@ onMounted(() => {
     <div class="container mx-auto px-4 py-6">
       <!-- Заголовок -->
       <div class="mb-6">
-        <h1 class="text-3xl font-bold text-text">Каталог товаров</h1>
+        <h1 class="text-3xl font-bold text-text">Каталог товаров)</h1>
         <p class="text-gray-600 mt-1">
           {{ totalProducts }} {{ totalProducts === 1 ? 'товар' : 'товаров' }}
           <span v-if="hasActiveFilters" class="text-primary font-medium">
