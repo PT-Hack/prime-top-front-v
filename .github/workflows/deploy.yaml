@@ -37,4 +37,4 @@ jobs:
           chmod +x ./deploy_front.sh
           ./deploy_front.sh
         "
-# test 2 workflow
+# test 3 workflow + build
