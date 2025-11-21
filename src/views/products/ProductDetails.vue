@@ -10,7 +10,8 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import AppCard from '@/components/common/AppCard.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLoader from '@/components/common/AppLoader.vue'
-
+import Dialog from 'primevue/dialog'
+import ColorPreview from './ColorPreview.vue'
 const router = useRouter()
 const route = useRoute()
 const { currentUser, hasCompany } = useAuth()
@@ -21,6 +22,7 @@ const product = ref<Product | null>(null)
 const quantity = ref(1)
 const addingToCart = ref(false)
 
+const colorPreviewVisible = ref(false)
 const productId = computed(() => route.params.id as string)
 
 // Можно ли добавить в корзину
@@ -124,11 +126,7 @@ onMounted(() => {
           <!-- Изображение -->
           <AppCard>
             <div class="aspect-square overflow-hidden rounded-lg bg-gray-100">
-              <img
-                :src="product.image"
-                :alt="product.name"
-                class="w-full h-full object-cover"
-              />
+              <img :src="product.image" :alt="product.name" class="w-full h-full object-cover" />
             </div>
           </AppCard>
 
@@ -150,9 +148,7 @@ onMounted(() => {
                   <span
                     :class="[
                       'px-3 py-1 rounded-full text-sm font-medium',
-                      product.isInStock
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800',
+                      product.isInStock ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800',
                     ]"
                   >
                     {{ product.isInStock ? 'В наличии' : 'Нет в наличии' }}
@@ -169,11 +165,21 @@ onMounted(() => {
                 <div v-if="product.isInStock" class="text-sm text-gray-600">
                   На складе: <span class="font-semibold">{{ product.stock }} кг</span>
                 </div>
-
+                <Dialog
+                  draggable="false"
+                  class="bg-white border-1 border-black w-1/2 text-black rounded-2xl p-4"
+                  header="Предпросмотр цвета"
+                  v-model:visible="colorPreviewVisible"
+                >
+                  <ColorPreview :color="product.ralColorHex" />
+                </Dialog>
                 <!-- RAL цвет -->
                 <div class="flex items-center gap-3">
                   <span class="text-gray-600">RAL цвет:</span>
-                  <div class="flex items-center gap-2">
+                  <div
+                    @click="colorPreviewVisible = true"
+                    class="flex cursor-pointer items-center gap-2"
+                  >
                     <div
                       class="w-8 h-8 rounded border border-gray-300"
                       :style="{ backgroundColor: product.ralColorHex }"
@@ -310,12 +316,7 @@ onMounted(() => {
       <!-- Товар не найден -->
       <AppCard v-else class="text-center py-12">
         <div class="text-gray-400 mb-4">
-          <svg
-            class="mx-auto h-16 w-16"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg class="mx-auto h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -325,10 +326,15 @@ onMounted(() => {
           </svg>
         </div>
         <p class="text-lg text-gray-600 mb-4">Товар не найден</p>
-        <AppButton variant="primary" @click="goBack">
-          Вернуться к каталогу
-        </AppButton>
+        <AppButton variant="primary" @click="goBack"> Вернуться к каталогу </AppButton>
       </AppCard>
     </div>
   </MainLayout>
 </template>
+
+<style>
+.p-dialog-header {
+  display: flex;
+  justify-content: space-between;
+}
+</style>
