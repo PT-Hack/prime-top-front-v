@@ -81,7 +81,11 @@ const getChatName = (chat: Chat): string => {
   }
 
   if (otherParticipants.length > 0) {
-    return otherParticipants.map((p) => p.fullName).join(', ')
+    return otherParticipants.map((p) => {
+      const parts = [p.last_name, p.first_name]
+      if (p.patronymic) parts.push(p.patronymic)
+      return parts.join(' ')
+    }).join(', ')
   }
 
   return 'Чат'

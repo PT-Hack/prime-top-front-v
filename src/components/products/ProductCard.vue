@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import type { Product } from '@/types/product.types'
+import type { Product, Series } from '@/types/product.types'
 import { useAuth } from '@/composables/useAuth'
 import { usePermissions } from '@/composables/usePermissions'
 import { useToast } from '@/composables/useToast'
@@ -21,27 +21,41 @@ const { showToast } = useToast()
 const isFavorite = ref(false)
 const favoriteLoading = ref(false)
 const addingToCart = ref(false)
+const selectedSeries = ref<Series | null>(null)
 
-onMounted(async () => {
+// Первая доступная серия или первая серия
+const firstSeries = computed(() => {
+  if (!props.product.series || props.product.series.length === 0) return null
+  return props.product.series[0]
+})
+
+// Инициализация выбранной серии
+onMounted(() => {
+  selectedSeries.value = firstSeries.value || null
   if (currentUser.value && canAddToFavorites.value) {
-    try {
-      isFavorite.value = await favoritesApi.isFavorite(currentUser.value.id, props.product.id)
-    } catch (error) {
-      console.error('Ошибка проверки избранного:', error)
-    }
+    checkFavorite()
   }
 })
+
+const checkFavorite = async () => {
+  try {
+    isFavorite.value = await favoritesApi.isFavorite(currentUser.value!.id, props.product.id)
+  } catch (error) {
+    console.error('Ошибка проверки избранного:', error)
+  }
+}
 
 const goToProduct = () => {
   router.push(`/products/${props.product.id}`)
 }
 
-const formatStock = (stock: number) => {
-  return `${stock.toLocaleString('ru-RU')} кг`
+const formatAmount = (amount: number | null | undefined) => {
+  if (amount === null || amount === undefined) return 'Нет данных'
+  return `${amount.toLocaleString('ru-RU')} кг`
 }
 
 const toggleFavorite = async (event: Event) => {
-  event.stopPropagation() // Предотвращаем переход на страницу продукта
+  event.stopPropagation()
 
   if (!currentUser.value || !canAddToFavorites.value) {
     showToast('Войдите в систему, чтобы добавить товар в избранное', 'warning')
@@ -66,7 +80,7 @@ const toggleFavorite = async (event: Event) => {
   }
 }
 
-const addProductToCart = async (event: Event) => {
+const addSeriesToCart = async (event: Event) => {
   event.stopPropagation()
 
   if (!currentUser.value || !canAddToCart.value) {
@@ -74,10 +88,15 @@ const addProductToCart = async (event: Event) => {
     return
   }
 
+  if (!selectedSeries.value) {
+    showToast('Выберите серию для добавления в корзину', 'warning')
+    return
+  }
+
   addingToCart.value = true
 
   try {
-    await cartApi.addToCart(currentUser.value.id, props.product.id, 1)
+    await cartApi.addToCart(currentUser.value.id, String(selectedSeries.value.id), 1)
     showToast('Товар добавлен в корзину', 'success')
   } catch (error) {
     showToast(error instanceof Error ? error.message : 'Не удалось добавить товар', 'error')
@@ -85,6 +104,10 @@ const addProductToCart = async (event: Event) => {
     addingToCart.value = false
   }
 }
+
+const hasAvailableSeries = computed(() => {
+  return props.product.series && props.product.series.some(s => (s.amount || 0) > 0)
+})
 </script>
 
 <template>
@@ -99,7 +122,7 @@ const addProductToCart = async (event: Event) => {
         v-if="canAddToFavorites"
         @click="toggleFavorite"
         :disabled="favoriteLoading"
-        class="absolute top-2 left-2 w-9 h-9 bg-white rounded-full shadow-md flex items-center justify-center transition-all hover:scale-110 disabled:opacity-50"
+        class="absolute top-2 left-2 w-9 h-9 bg-white rounded-full shadow-md flex items-center justify-center transition-all hover:scale-110 disabled:opacity-50 z-10"
         :class="{ 'text-error': isFavorite, 'text-gray-400': !isFavorite }"
         :title="isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'"
       >
@@ -113,20 +136,6 @@ const addProductToCart = async (event: Event) => {
         </svg>
       </button>
 
-      <div class="absolute top-2 right-2 flex items-center gap-2">
-        <!-- Индикатор цвета RAL -->
-        <div
-          class="w-8 h-8 rounded-full border-2 border-white shadow-md"
-          :style="{ backgroundColor: product.ralColorHex }"
-          :title="product.ralColor"
-        ></div>
-      </div>
-      <img
-        v-if="product.image"
-        :src="product.image"
-        :alt="product.name"
-        class="w-full h-full object-cover"
-      />
       <div v-else class="text-gray-500 text-center p-4">
         <svg class="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -144,45 +153,58 @@ const addProductToCart = async (event: Event) => {
     <div class="p-4">
       <!-- Название номенклатурное -->
       <h3 class="font-medium text-text text-sm mb-2 line-clamp-2 h-10">
-        {{ product.nomenclatureName }}
+        {{ product.nomenclature }}
       </h3>
 
-      <!-- RAL цвет -->
-      <div class="flex items-center gap-2 mb-2">
-        <span class="text-xs text-gray-600">Цвет:</span>
-        <span class="text-xs font-medium">{{ product.ralColor }}</span>
+      <!-- Клиент (если есть) -->
+      <div v-if="product.client" class="flex items-center gap-2 mb-2">
+        <span class="text-xs text-gray-600">Клиент:</span>
+        <span class="text-xs font-medium">{{ product.client }}</span>
       </div>
 
-      <!-- Количество остатка -->
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-xs text-gray-600">В наличии:</span>
-        <span class="text-sm font-bold text-primary">
-          {{ formatStock(product.stock) }}
-        </span>
+      <!-- Серии -->
+      <div v-if="product.series && product.series.length > 0" class="mb-2">
+        <div v-if="product.series.length === 1" class="space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-600">Серия:</span>
+            <span class="text-xs font-medium">{{ firstSeries?.title || 'Без названия' }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-600">В наличии:</span>
+            <span class="text-sm font-bold text-primary">
+              {{ formatAmount(firstSeries?.amount) }}
+            </span>
+          </div>
+        </div>
+        <div v-else class="space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-600">Серий:</span>
+            <span class="text-xs font-medium">{{ product.series.length }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-600">Доступно:</span>
+            <span class="text-sm font-bold text-primary">
+              {{ hasAvailableSeries ? 'Есть в наличии' : 'Нет в наличии' }}
+            </span>
+          </div>
+        </div>
       </div>
-
-      <!-- Цена -->
-      <div class="text-lg font-bold text-text mt-2">
-        {{ product.price.toLocaleString('ru-RU') }} ₽/кг
-      </div>
-
-      <!-- Партия (если есть) -->
-      <div v-if="product.batchInfo" class="text-xs text-gray-500 mt-2">
-        Партия: {{ product.batchInfo.batchNumber }}
+      <div v-else class="text-xs text-gray-500 mb-2">
+        Нет серий
       </div>
 
       <!-- Кнопка добавления в корзину -->
       <button
-        v-if="canAddToCart"
-        @click="addProductToCart"
-        :disabled="addingToCart || product.stock === 0"
+        v-if="canAddToCart && firstSeries"
+        @click="addSeriesToCart"
+        :disabled="addingToCart || !hasAvailableSeries"
         class="w-full mt-4 px-4 py-2 bg-[#054787] text-white rounded-lg hover:bg-[#0067cb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         <svg v-if="!addingToCart" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
         <span v-if="addingToCart">Добавление...</span>
-        <span v-else-if="product.stock === 0">Нет в наличии</span>
+        <span v-else-if="!hasAvailableSeries">Нет в наличии</span>
         <span v-else>В корзину</span>
       </button>
     </div>

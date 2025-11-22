@@ -6,6 +6,7 @@ import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 import { cartApi } from '@/services/api/cart.api'
 import { ordersApi } from '@/services/api/orders.api'
+import { formatters } from '@/utils/formatters'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLoader from '@/components/common/AppLoader.vue'
@@ -19,7 +20,9 @@ const cartItems = ref<CartItem[]>([])
 const creatingOrder = ref(false)
 
 const cartTotal = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+  // В реальном приложении здесь будет расчет стоимости на основе серий
+  // Пока возвращаем 0, так как в сериях нет поля price
+  return 0
 })
 
 const loadCart = async () => {
@@ -59,19 +62,26 @@ const removeItem = async (itemId: string) => {
 }
 
 const createOrder = async () => {
-  if (!currentUser.value || !hasCompany.value) {
+  if (!currentUser.value || !hasCompany.value || !currentUser.value.company_id) {
     showToast('Создайте компанию для оформления заказа', 'warning')
+    return
+  }
+
+  if (cartItems.value.length === 0) {
+    showToast('Корзина пуста', 'warning')
     return
   }
 
   creatingOrder.value = true
   try {
-    const order = await ordersApi.createOrder(
-      currentUser.value.id,
-      currentUser.value.companyId!,
-      'Моя компания',
-      cartItems.value
-    )
+    const order = await ordersApi.createOrder({
+      company_id: currentUser.value.company_id,
+      user_id: currentUser.value.id,
+      series: cartItems.value.map(item => ({
+        id: Number(item.seriesId),
+        amount: item.quantity
+      }))
+    })
 
     await cartApi.clearCart(currentUser.value.id)
     showToast('Заказ успешно создан!', 'success')
@@ -103,17 +113,18 @@ onMounted(() => {
             <div class="flex gap-4">
               <div class="w-20 h-20 bg-gray-200 rounded flex-shrink-0"></div>
               <div class="flex-1">
-                <h3 class="font-medium text-text mb-1">{{ item.product.nomenclatureName }}</h3>
-                <p class="text-sm text-gray-600">{{ item.product.ralColor }}</p>
-                <p class="text-lg font-bold text-primary mt-2">{{ item.product.price.toLocaleString('ru-RU') }} ₽/кг</p>
+                <h3 class="font-medium text-text mb-1">{{ item.series.title || 'Серия без названия' }}</h3>
+                <p class="text-sm text-gray-600">ID серии: {{ item.seriesId }}</p>
+                <p v-if="item.series.amount !== null && item.series.amount !== undefined" class="text-sm text-gray-600">
+                  Доступно: {{ formatters.number(item.series.amount) }} кг
+                </p>
               </div>
               <div class="flex flex-col items-end gap-2">
                 <div class="flex items-center gap-2">
                   <button @click="updateQuantity(item, item.quantity - 1)" :disabled="item.quantity <= 1" class="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50">-</button>
                   <span class="w-16 text-center font-medium">{{ item.quantity }} кг</span>
-                  <button @click="updateQuantity(item, item.quantity + 1)" class="w-8 h-8 border rounded hover:bg-gray-100">+</button>
+                  <button @click="updateQuantity(item, item.quantity + 1)" :disabled="item.series.amount !== null && item.series.amount !== undefined && item.quantity >= item.series.amount" class="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50">+</button>
                 </div>
-                <p class="text-sm font-bold">{{ (item.product.price * item.quantity).toLocaleString('ru-RU') }} ₽</p>
                 <button @click="removeItem(item.id)" class="text-sm text-error hover:underline">Удалить</button>
               </div>
             </div>

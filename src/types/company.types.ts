@@ -1,38 +1,47 @@
-import type { User, UserRole } from './auth.types'
+import type { User } from './auth.types'
 
 export interface Company {
   id: string
-  name: string
-  ogrn: string
-  inn: string
-  kpp: string
-  legalAddress: string
-  actualAddress: string
+  title: string
+  INN: string
+  KPP: string
+  OGRN: string
+  address: string
   phone: string
   email: string
-  director: string
-  status: 'pending' | 'active' | 'rejected'
-  createdAt: string
-  members: CompanyMember[]
-}
-
-export interface CompanyMember {
-  userId: string
-  user: User
-  role: UserRole
-  joinedAt: string
+  checking_account: string
+  bank_name: string
+  BIK: string
+  correspondent_account: string
+  users?: User[]
 }
 
 export interface CreateCompanyData {
-  name: string
-  ogrn: string
-  inn: string
-  kpp: string
-  legalAddress: string
-  actualAddress: string
+  title: string
+  INN: string
+  KPP: string
+  OGRN: string
+  address: string
   phone: string
   email: string
-  director: string
+  checking_account: string
+  bank_name: string
+  BIK: string
+  correspondent_account: string
+}
+
+export interface UpdateCompanyData {
+  title: string
+  INN: string
+  KPP: string
+  OGRN: string
+  address: string
+  phone: string
+  email: string
+  checking_account: string
+  bank_name: string
+  BIK: string
+  correspondent_account: string
 }
 
 export interface CompaniesState {

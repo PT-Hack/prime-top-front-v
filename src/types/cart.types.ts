@@ -1,11 +1,10 @@
-import type { Product } from './product.types'
+import type { Series } from './product.types'
 
 export interface CartItem {
   id: string
-  productId: string
-  product: Product
+  seriesId: string
+  series: Series
   quantity: number
-  isFromStock: boolean
 }
 
 export interface CartState {

@@ -19,8 +19,8 @@ export function useAuth() {
     return authStore.logout()
   }
 
-  const userRole = computed(() => currentUser.value?.role)
-  const hasCompany = computed(() => !!currentUser.value?.companyId)
+  const userRole = computed(() => currentUser.value?.role?.title)
+  const hasCompany = computed(() => !!currentUser.value?.company_id)
 
   return {
     currentUser,

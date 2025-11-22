@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 import { authApi } from '@/services/api/auth.api'
+import { formatters } from '@/utils/formatters'
 import type { User } from '@/types/auth.types'
 import AppInput from '@/components/common/AppInput.vue'
 import AppButton from '@/components/common/AppButton.vue'
@@ -14,32 +15,37 @@ const loading = ref(false)
 const editing = ref(false)
 
 const formData = ref({
-  fullName: currentUser.value?.fullName || '',
+  last_name: currentUser.value?.last_name || '',
+  first_name: currentUser.value?.first_name || '',
+  patronymic: currentUser.value?.patronymic || '',
   email: currentUser.value?.email || '',
-  phone: currentUser.value?.phone || '',
 })
 
 const errors = ref({
-  fullName: '',
+  last_name: '',
+  first_name: '',
+  patronymic: '',
   email: '',
-  phone: '',
 })
 
 const isFormValid = computed(() => {
   return (
-    formData.value.fullName.trim() !== '' &&
+    formData.value.last_name.trim() !== '' &&
+    formData.value.first_name.trim() !== '' &&
     formData.value.email.trim() !== '' &&
-    !errors.value.fullName &&
-    !errors.value.email &&
-    !errors.value.phone
+    !errors.value.last_name &&
+    !errors.value.first_name &&
+    !errors.value.email
   )
 })
 
 const hasChanges = computed(() => {
+  if (!currentUser.value) return false
   return (
-    formData.value.fullName !== currentUser.value?.fullName ||
-    formData.value.email !== currentUser.value?.email ||
-    formData.value.phone !== (currentUser.value?.phone || '')
+    formData.value.last_name !== currentUser.value.last_name ||
+    formData.value.first_name !== currentUser.value.first_name ||
+    formData.value.patronymic !== (currentUser.value.patronymic || '') ||
+    formData.value.email !== currentUser.value.email
   )
 })
 
@@ -47,13 +53,23 @@ const validateField = (field: keyof typeof formData.value) => {
   const value = formData.value[field]
 
   switch (field) {
-    case 'fullName':
+    case 'last_name':
       if (!value.trim()) {
-        errors.value.fullName = 'Имя обязательно для заполнения'
+        errors.value.last_name = 'Фамилия обязательна для заполнения'
       } else if (value.trim().length < 2) {
-        errors.value.fullName = 'Имя должно содержать минимум 2 символа'
+        errors.value.last_name = 'Фамилия должна содержать минимум 2 символа'
       } else {
-        errors.value.fullName = ''
+        errors.value.last_name = ''
+      }
+      break
+
+    case 'first_name':
+      if (!value.trim()) {
+        errors.value.first_name = 'Имя обязательно для заполнения'
+      } else if (value.trim().length < 2) {
+        errors.value.first_name = 'Имя должно содержать минимум 2 символа'
+      } else {
+        errors.value.first_name = ''
       }
       break
 
@@ -66,14 +82,6 @@ const validateField = (field: keyof typeof formData.value) => {
         errors.value.email = ''
       }
       break
-
-    case 'phone':
-      if (value && !/^\+?[\d\s\-()]+$/.test(value)) {
-        errors.value.phone = 'Некорректный формат телефона'
-      } else {
-        errors.value.phone = ''
-      }
-      break
   }
 }
 
@@ -84,15 +92,19 @@ const startEditing = () => {
 const cancelEditing = () => {
   editing.value = false
   // Восстанавливаем исходные значения
-  formData.value = {
-    fullName: currentUser.value?.fullName || '',
-    email: currentUser.value?.email || '',
-    phone: currentUser.value?.phone || '',
+  if (currentUser.value) {
+    formData.value = {
+      last_name: currentUser.value.last_name,
+      first_name: currentUser.value.first_name,
+      patronymic: currentUser.value.patronymic || '',
+      email: currentUser.value.email,
+    }
   }
   errors.value = {
-    fullName: '',
+    last_name: '',
+    first_name: '',
+    patronymic: '',
     email: '',
-    phone: '',
   }
 }
 
@@ -103,9 +115,10 @@ const handleSubmit = async () => {
 
   try {
     const updatedUser = await authApi.updateProfile(currentUser.value.id, {
-      fullName: formData.value.fullName.trim(),
+      last_name: formData.value.last_name.trim(),
+      first_name: formData.value.first_name.trim(),
+      patronymic: formData.value.patronymic.trim() || null,
       email: formData.value.email.trim(),
-      phone: formData.value.phone.trim() || undefined,
     })
 
     // Обновляем currentUser через store
@@ -159,13 +172,32 @@ const handleSubmit = async () => {
 
     <form @submit.prevent="handleSubmit" class="space-y-4">
       <AppInput
-        v-model="formData.fullName"
-        label="ФИО"
-        placeholder="Введите полное имя"
-        :error="errors.fullName"
+        v-model="formData.last_name"
+        label="Фамилия"
+        placeholder="Введите фамилию"
+        :error="errors.last_name"
         :disabled="!editing"
         required
-        @blur="validateField('fullName')"
+        @blur="validateField('last_name')"
+      />
+
+      <AppInput
+        v-model="formData.first_name"
+        label="Имя"
+        placeholder="Введите имя"
+        :error="errors.first_name"
+        :disabled="!editing"
+        required
+        @blur="validateField('first_name')"
+      />
+
+      <AppInput
+        v-model="formData.patronymic"
+        label="Отчество"
+        placeholder="Введите отчество (необязательно)"
+        :error="errors.patronymic"
+        :disabled="!editing"
+        @blur="validateField('patronymic')"
       />
 
       <AppInput
@@ -179,19 +211,9 @@ const handleSubmit = async () => {
         @blur="validateField('email')"
       />
 
-      <AppInput
-        v-model="formData.phone"
-        type="tel"
-        label="Телефон"
-        placeholder="+7 (999) 123-45-67"
-        :error="errors.phone"
-        :disabled="!editing"
-        @blur="validateField('phone')"
-      />
-
       <div class="text-sm text-gray-600">
-        <p><strong>Роль:</strong> {{ currentUser?.role }}</p>
-        <p><strong>Дата регистрации:</strong> {{ new Date(currentUser?.createdAt || '').toLocaleDateString('ru-RU') }}</p>
+        <p><strong>Роль:</strong> {{ currentUser?.role?.description || currentUser?.role?.title || 'Не указана' }}</p>
+        <p v-if="currentUser?.email_verified_at"><strong>Email подтвержден:</strong> {{ new Date(currentUser.email_verified_at).toLocaleDateString('ru-RU') }}</p>
       </div>
     </form>
   </div>

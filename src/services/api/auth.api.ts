@@ -1,94 +1,142 @@
-import type { AuthCredentials, RegisterData, User } from '@/types/auth.types'
-import { mockUsers, mockAuthCredentials } from '@/services/mock/auth.mock'
+import type { AuthCredentials, RegisterData, VerifyData, User } from '@/types/auth.types'
+import { apiClient } from './client'
 
-// Симуляция задержки сети
-const delay = (ms = 500) => new Promise((resolve) => setTimeout(resolve, ms))
+interface LoginResponse {
+  token: string
+  user: {
+    id: string
+    last_name: string
+    first_name: string
+    patronymic?: string | null
+    email: string
+    role: string
+  }
+}
+
+interface RegisterResponse {
+  message: string
+  user_id: string
+}
+
+interface VerifyResponse {
+  message: string
+  token: string
+  user: {
+    id: string
+    last_name: string
+    first_name: string
+    patronymic?: string | null
+    email: string
+    role: string
+  }
+}
+
+// Преобразуем ответ сервера в User
+const mapUserResponse = (userData: LoginResponse['user'], token?: string): User => {
+  // Определяем role_id на основе role title
+  const roleIdMap: Record<string, number> = {
+    'system-admin': 1,
+    'system-manager': 2,
+    'client-admin': 3,
+    'client-manager': 4,
+  }
+
+  return {
+    id: String(userData.id),
+    last_name: userData.last_name,
+    first_name: userData.first_name,
+    patronymic: userData.patronymic || null,
+    email: userData.email,
+    role_id: roleIdMap[userData.role] || 4,
+    company_id: null, // Будет загружено отдельно если нужно
+    email_verified_at: null,
+    role: {
+      id: roleIdMap[userData.role] || 4,
+      title: userData.role,
+      description: userData.role,
+    },
+  }
+}
 
 export const authApi = {
   async login(credentials: AuthCredentials): Promise<User> {
-    await delay()
-
-    // Проверка учетных данных
-    const user = mockUsers.find((u) => u.email === credentials.login)
-
-    // Простая проверка пароля (в реальном приложении будет хеширование)
-    const validCredentials = Object.values(mockAuthCredentials).find(
-      (cred) =>
-        cred.login === credentials.login && cred.password === credentials.password,
+    const response = await apiClient.post<LoginResponse>(
+      '/auth/login',
+      credentials,
+      { skipAuth: true }
     )
 
-    if (!validCredentials || !user) {
-      throw new Error('Неверный логин или пароль')
-    }
-
-    // Сохраняем токен в localStorage (заглушка)
-    localStorage.setItem('authToken', 'mock-token-' + user.id)
+    // Сохраняем токен
+    localStorage.setItem('authToken', response.token)
+    
+    const user = mapUserResponse(response.user, response.token)
     localStorage.setItem('currentUser', JSON.stringify(user))
 
     return user
   },
 
-  async register(data: RegisterData): Promise<User> {
-    await delay()
+  async register(data: RegisterData): Promise<{ user_id: string; message: string }> {
+    const response = await apiClient.post<RegisterResponse>(
+      '/auth/register',
+      data,
+      { skipAuth: true }
+    )
 
-    // Проверка на существующего пользователя
-    const existingUser = mockUsers.find((u) => u.email === data.login)
-    if (existingUser) {
-      throw new Error('Пользователь с таким email уже существует')
+    return {
+      user_id: response.user_id,
+      message: response.message,
     }
+  },
 
-    // Создание нового пользователя (заглушка)
-    const newUser: User = {
-      id: 'user-' + Date.now(),
-      email: data.login,
-      fullName: data.fullName,
-      role: 'user' as any,
-      createdAt: new Date().toISOString(),
-      notificationSettings: {
-        email: true,
-        push: false,
-        sms: false,
-      },
-    }
+  async verify(data: VerifyData): Promise<User> {
+    const response = await apiClient.post<VerifyResponse>(
+      '/auth/verify',
+      data,
+      { skipAuth: true }
+    )
 
-    mockUsers.push(newUser)
+    // Сохраняем токен
+    localStorage.setItem('authToken', response.token)
+    
+    const user = mapUserResponse(response.user, response.token)
+    localStorage.setItem('currentUser', JSON.stringify(user))
 
-    localStorage.setItem('authToken', 'mock-token-' + newUser.id)
-    localStorage.setItem('currentUser', JSON.stringify(newUser))
-
-    return newUser
+    return user
   },
 
   async logout(): Promise<void> {
-    await delay(200)
-
-    localStorage.removeItem('authToken')
-    localStorage.removeItem('currentUser')
+    try {
+      await apiClient.post('/auth/logout')
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      localStorage.removeItem('authToken')
+      localStorage.removeItem('currentUser')
+    }
   },
 
   async getCurrentUser(): Promise<User | null> {
-    await delay(200)
-
     const userJson = localStorage.getItem('currentUser')
     if (!userJson) return null
 
-    return JSON.parse(userJson)
+    try {
+      return JSON.parse(userJson)
+    } catch {
+      return null
+    }
   },
 
   async updateProfile(userId: string, data: Partial<User>): Promise<User> {
-    await delay()
-
-    const userIndex = mockUsers.findIndex((u) => u.id === userId)
-    if (userIndex === -1) {
-      throw new Error('Пользователь не найден')
+    // В реальном приложении здесь будет запрос к API
+    // Пока обновляем локально
+    const userJson = localStorage.getItem('currentUser')
+    if (userJson) {
+      const user = JSON.parse(userJson)
+      const updatedUser = { ...user, ...data }
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser))
+      return updatedUser
     }
-
-    const updatedUser = { ...mockUsers[userIndex]!, ...data } as User
-    mockUsers[userIndex] = updatedUser
-
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser))
-
-    return updatedUser
+    throw new Error('Пользователь не найден')
   },
 
   async changePassword(
@@ -96,9 +144,7 @@ export const authApi = {
     oldPassword: string,
     newPassword: string,
   ): Promise<void> {
-    await delay()
-
-    // В реальном приложении проверяем старый пароль и обновляем
+    // В реальном приложении здесь будет запрос к API
     console.log('Password changed for user', userId)
   },
 }

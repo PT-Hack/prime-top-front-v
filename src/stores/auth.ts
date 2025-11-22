@@ -8,8 +8,8 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
 
   const isAuthenticated = computed(() => currentUser.value !== null)
-  const userRole = computed(() => currentUser.value?.role)
-  const hasCompany = computed(() => !!currentUser.value?.companyId)
+  const userRole = computed(() => currentUser.value?.role?.title)
+  const hasCompany = computed(() => !!currentUser.value?.company_id)
 
   const login = async (credentials: AuthCredentials) => {
     loading.value = true
@@ -24,7 +24,18 @@ export const useAuthStore = defineStore('auth', () => {
   const register = async (data: RegisterData) => {
     loading.value = true
     try {
-      currentUser.value = await authApi.register(data)
+      const response = await authApi.register(data)
+      // register возвращает { user_id, message }, нужно вызвать verify для получения пользователя
+      return response
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const verify = async (data: { user_id: string; code: string }) => {
+    loading.value = true
+    try {
+      currentUser.value = await authApi.verify(data)
       return currentUser.value
     } finally {
       loading.value = false
@@ -84,6 +95,7 @@ export const useAuthStore = defineStore('auth', () => {
     hasCompany,
     login,
     register,
+    verify,
     logout,
     updateProfile,
     changePassword,
