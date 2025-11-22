@@ -3,6 +3,7 @@ import { RouterView } from 'vue-router'
 import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import AppToast from '@/components/common/AppToast.vue'
+// import Valik from '@/views/visuals/Valik.vue'
 
 const authStore = useAuthStore()
 
@@ -14,6 +15,7 @@ onMounted(async () => {
 
 <template>
   <div id="app">
+    <!-- <Valik /> -->
     <RouterView />
     <AppToast />
   </div>
