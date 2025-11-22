@@ -25,6 +25,7 @@ class ApiClient {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'Access-Control-Allow-Origin': '*',
       ...(fetchOptions.headers as HeadersInit),
     }
 
@@ -39,6 +40,7 @@ class ApiClient {
     try {
       const response = await fetch(url, {
         ...fetchOptions,
+        mode: 'cors',
         headers,
       })
 

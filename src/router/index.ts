@@ -20,6 +20,12 @@ const router = createRouter({
       component: () => import('../views/auth/Register.vue'),
       meta: { requiresAuth: false, guestOnly: true },
     },
+    {
+      path: '/verify',
+      name: 'verify',
+      component: () => import('../views/auth/Verify.vue'),
+      meta: { requiresAuth: false, guestOnly: true },
+    },
 
     // Protected routes
     {

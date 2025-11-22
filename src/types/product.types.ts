@@ -1,6 +1,9 @@
 export interface Product {
   id: string
   nomenclature: string
+  color_ral_code : string | null
+  color_name : string | null
+  color_hex : string | null
   client?: string | null
   series?: Series[]
 }

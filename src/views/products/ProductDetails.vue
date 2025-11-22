@@ -10,6 +10,9 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import AppCard from '@/components/common/AppCard.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLoader from '@/components/common/AppLoader.vue'
+import Dialog from 'primevue/dialog'
+import ColorPreview from './ColorPreview.vue'
+
 const router = useRouter()
 const route = useRoute()
 const { currentUser, hasCompany } = useAuth()
@@ -20,6 +23,7 @@ const product = ref<Product | null>(null)
 const quantity = ref(1)
 const addingToCart = ref(false)
 const selectedSeries = ref<string | null>(null)
+const colorPreviewVisible = ref(false)
 
 const productId = computed(() => route.params.id as string)
 
@@ -34,24 +38,6 @@ const canAddToCart = computed(() => {
   return hasCompany.value && product.value && firstSeries.value && (firstSeries.value.amount || 0) > 0
 })
 
-// Форматирование цены
-const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
-    minimumFractionDigits: 0,
-  }).format(price)
-}
-
-// Форматирование даты
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString)
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date)
-}
 
 // Загрузка товара
 const loadProduct = async () => {
@@ -98,9 +84,9 @@ const handleAddToCart = async () => {
     await cartApi.addToCart(currentUser.value.id, selectedSeries.value, quantity.value)
     showToast('Товар добавлен в корзину', 'success')
     quantity.value = 1
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Ошибка добавления в корзину:', error)
-    showToast(error.message || 'Ошибка добавления в корзину', 'error')
+    showToast((error instanceof Error ? error.message : 'Ошибка добавления в корзину'), 'error')
   } finally {
     addingToCart.value = false
   }
@@ -140,14 +126,7 @@ onMounted(() => {
           <!-- Изображение -->
           <AppCard>
             <div class="aspect-square overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
-              <svg class="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
+              <img src="@/assets/vedra2.png" alt="Изображение товара" class="w-full h-full object-cover">
             </div>
           </AppCard>
 
@@ -161,18 +140,47 @@ onMounted(() => {
                   <p v-if="product.client" class="text-gray-600">Клиент: {{ product.client }}</p>
                 </div>
 
+                <!-- Информация о цвете -->
+                <div v-if="product.color_hex || product.color_name || product.color_ral_code" class="space-y-2">
+                  <div class="flex items-center gap-3">
+                    <span class="text-gray-600">Цвет:</span>
+                    <div v-if="product.color_hex" @click="colorPreviewVisible = true"
+                      class="flex cursor-pointer items-center gap-2 hover:opacity-80 transition-opacity">
+                      <div class="w-10 h-10 rounded border-2 border-gray-300 shadow-sm"
+                        :style="{ backgroundColor: product.color_hex }"
+                        :title="product.color_name || product.color_ral_code || 'Цвет'"></div>
+                      <span class="font-semibold">
+                        <span v-if="product.color_ral_code">RAL {{ product.color_ral_code }}</span>
+                        <span v-if="product.color_name" class="ml-1">({{ product.color_name }})</span>
+                      </span>
+                    </div>
+                    <span v-else-if="product.color_ral_code" class="font-semibold">RAL {{ product.color_ral_code
+                    }}</span>
+                    <span v-else-if="product.color_name" class="font-semibold">{{ product.color_name }}</span>
+                  </div>
+                </div>
+
+                <!-- Названия серий -->
+                <div v-if="product.series && product.series.length > 0" class="space-y-1">
+                  <span class="text-gray-600 text-sm">Доступные серии:</span>
+                  <div class="flex flex-wrap gap-2">
+                    <span v-for="series in product.series" :key="series.id"
+                      class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm">
+                      {{ series.title || `Серия #${series.id}` }}
+                    </span>
+                  </div>
+                </div>
+
                 <!-- Серии -->
                 <div v-if="product.series && product.series.length > 0" class="space-y-3">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                       Выберите серию
                     </label>
-                    <select
-                      v-model="selectedSeries"
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
+                    <select v-model="selectedSeries"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
                       <option v-for="series in product.series" :key="series.id" :value="String(series.id)">
-                        {{ series.title || `Серия #${series.id}` }} 
+                        {{ series.title || `Серия #${series.id}` }}
                         <span v-if="series.amount !== null && series.amount !== undefined">
                           ({{ series.amount }} кг)
                         </span>
@@ -209,21 +217,11 @@ onMounted(() => {
                       <label class="block text-sm font-medium text-gray-700 mb-2">
                         Количество (кг)
                       </label>
-                      <input
-                        v-model.number="quantity"
-                        type="number"
-                        min="1"
+                      <input v-model.number="quantity" type="number" min="1"
                         :max="product.series?.find(s => String(s.id) === selectedSeries)?.amount || 999999"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
                     </div>
-                    <AppButton
-                      variant="primary"
-                      size="lg"
-                      full-width
-                      :loading="addingToCart"
-                      @click="handleAddToCart"
-                    >
+                    <AppButton variant="primary" size="lg" full-width :loading="addingToCart" @click="handleAddToCart">
                       Добавить в корзину
                     </AppButton>
                   </div>
@@ -251,11 +249,8 @@ onMounted(() => {
         <AppCard v-if="product.series && product.series.length > 0">
           <h2 class="text-2xl font-semibold text-text mb-4">Серии ({{ product.series.length }})</h2>
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div
-              v-for="series in product.series"
-              :key="series.id"
-              class="p-4 border border-gray-300 rounded-lg hover:shadow-md transition-shadow"
-            >
+            <div v-for="series in product.series" :key="series.id"
+              class="p-4 border border-gray-300 rounded-lg hover:shadow-md transition-shadow">
               <h3 class="font-semibold text-text mb-2">{{ series.title || `Серия #${series.id}` }}</h3>
               <div class="space-y-1 text-sm text-gray-600">
                 <div v-if="series.amount !== null && series.amount !== undefined">
@@ -280,17 +275,27 @@ onMounted(() => {
       <AppCard v-else class="text-center py-12">
         <div class="text-gray-400 mb-4">
           <svg class="mx-auto h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-            />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
           </svg>
         </div>
         <p class="text-lg text-gray-600 mb-4">Товар не найден</p>
         <AppButton variant="primary" @click="goBack"> Вернуться к каталогу </AppButton>
       </AppCard>
+
+      <!-- Dialog для превью цвета -->
+      <Dialog v-model:visible="colorPreviewVisible" :modal="true" :draggable="false"
+        class="bg-white border border-gray-300 rounded-2xl p-4" :style="{ width: '90vw', maxWidth: '800px' }"
+        header="Предпросмотр цвета">
+        <template v-if="product?.color_hex">
+          <ColorPreview :color="product.color_hex" texture-type="wood" />
+        </template>
+        <template v-else>
+          <div class="text-center py-8 text-gray-500">
+            Цвет не указан
+          </div>
+        </template>
+      </Dialog>
     </div>
   </MainLayout>
 </template>

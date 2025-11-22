@@ -111,7 +111,7 @@ onMounted(() => {
         <div class="lg:col-span-2 space-y-4">
           <div v-for="item in cartItems" :key="item.id" class="bg-white rounded-lg border border-gray-400 p-4">
             <div class="flex gap-4">
-              <div class="w-20 h-20 bg-gray-200 rounded flex-shrink-0"></div>
+              <img src="@/assets/vedro1.png" alt="Product" class="w-20 h-20 bg-gray-200 rounded flex-shrink-0">
               <div class="flex-1">
                 <h3 class="font-medium text-text mb-1">{{ item.series.title || 'Серия без названия' }}</h3>
                 <p class="text-sm text-gray-600">ID серии: {{ item.seriesId }}</p>
@@ -121,9 +121,12 @@ onMounted(() => {
               </div>
               <div class="flex flex-col items-end gap-2">
                 <div class="flex items-center gap-2">
-                  <button @click="updateQuantity(item, item.quantity - 1)" :disabled="item.quantity <= 1" class="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50">-</button>
+                  <button @click="updateQuantity(item, item.quantity - 1)" :disabled="item.quantity <= 1"
+                    class="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50">-</button>
                   <span class="w-16 text-center font-medium">{{ item.quantity }} кг</span>
-                  <button @click="updateQuantity(item, item.quantity + 1)" :disabled="item.series.amount !== null && item.series.amount !== undefined && item.quantity >= item.series.amount" class="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50">+</button>
+                  <button @click="updateQuantity(item, item.quantity + 1)"
+                    :disabled="item.series.amount !== null && item.series.amount !== undefined && item.quantity >= item.series.amount"
+                    class="w-8 h-8 border rounded hover:bg-gray-100 disabled:opacity-50">+</button>
                 </div>
                 <button @click="removeItem(item.id)" class="text-sm text-error hover:underline">Удалить</button>
               </div>
@@ -144,17 +147,20 @@ onMounted(() => {
                 <span>{{ cartTotal.toLocaleString('ru-RU') }} ₽</span>
               </div>
             </div>
-            <AppButton variant="primary" :full-width="true" @click="createOrder" :loading="creatingOrder" :disabled="!hasCompany">
+            <AppButton variant="primary" :full-width="true" @click="createOrder" :loading="creatingOrder"
+              :disabled="!hasCompany">
               Оформить заказ
             </AppButton>
-            <p v-if="!hasCompany" class="text-sm text-error mt-2 text-center">Создайте компанию для оформления заказа</p>
+            <p v-if="!hasCompany" class="text-sm text-error mt-2 text-center">Создайте компанию для оформления заказа
+            </p>
           </div>
         </div>
       </div>
 
       <div v-else class="text-center py-20">
         <svg class="w-24 h-24 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
         <h3 class="text-xl font-medium text-gray-600 mb-2">Корзина пуста</h3>
         <p class="text-gray-500 mb-6">Добавьте товары из каталога</p>

@@ -108,7 +108,7 @@ const handleSubmit = async () => {
   isSubmitting.value = true
 
   try {
-    await authStore.register({
+    const response = await authStore.register({
       last_name: last_name.value,
       first_name: first_name.value,
       patronymic: patronymic.value || null,
@@ -116,8 +116,17 @@ const handleSubmit = async () => {
       password: password.value,
       password_confirmation: confirmPassword.value,
     })
-    showSuccess('Регистрация успешна! Добро пожаловать!')
-    router.push('/')
+    
+    showSuccess(response.message || 'Код подтверждения отправлен на вашу почту')
+    
+    // Переходим на страницу верификации с user_id
+    router.push({
+      name: 'verify',
+      query: {
+        user_id: response.user_id,
+        email: email.value,
+      },
+    })
   } catch (error: any) {
     showError(error.message || 'Ошибка регистрации')
   } finally {

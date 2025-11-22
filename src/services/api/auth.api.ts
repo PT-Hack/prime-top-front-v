@@ -15,7 +15,7 @@ interface LoginResponse {
 
 interface RegisterResponse {
   message: string
-  user_id: string
+  user_id: string | number
 }
 
 interface VerifyResponse {
@@ -83,7 +83,7 @@ export const authApi = {
     )
 
     return {
-      user_id: response.user_id,
+      user_id: String(response.user_id),
       message: response.message,
     }
   },
@@ -91,7 +91,10 @@ export const authApi = {
   async verify(data: VerifyData): Promise<User> {
     const response = await apiClient.post<VerifyResponse>(
       '/auth/verify',
-      data,
+      {
+        user_id: data.user_id,
+        code: data.code,
+      },
       { skipAuth: true }
     )
 

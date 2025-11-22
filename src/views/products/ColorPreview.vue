@@ -2,21 +2,19 @@
   <div ref="container" class="w-full h-96 bg-gray-100 rounded-lg overflow-hidden" />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, shallowRef } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 
-const props = defineProps({
-  color: {
-    type: String,
-    default: '#FF69B4',
-  },
-  textureType: {
-    type: String,
-    default: 'wood',
-    validator: (value) => ['wood', 'metal', 'brick', 'tile', 'concrete'].includes(value),
-  },
+interface Props {
+  color?: string
+  textureType?: 'wood' | 'metal' | 'brick' | 'tile' | 'concrete'
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  color: '#FF69B4',
+  textureType: 'wood',
 })
 
 const container = ref(null)
@@ -29,13 +27,14 @@ const controls = shallowRef(null)
 const cube = shallowRef(null)
 
 // Создаем нормальные карты для разных материалов
-const createNormalMaps = () => {
+const createNormalMaps = (): Record<string, THREE.CanvasTexture> => {
   const canvas = document.createElement('canvas')
   canvas.width = 256
   canvas.height = 256
   const context = canvas.getContext('2d')
+  if (!context) throw new Error('Could not get canvas context')
 
-  const normalMaps = {}
+  const normalMaps: Record<string, THREE.CanvasTexture> = {}
 
   // Дерево - вертикальные полосы
   for (let x = 0; x < 256; x++) {
@@ -106,9 +105,11 @@ const createNormalMaps = () => {
 
   // Настройка повторения нормальных карт
   Object.values(normalMaps).forEach((normalMap) => {
-    normalMap.wrapS = THREE.RepeatWrapping
-    normalMap.wrapT = THREE.RepeatWrapping
-    normalMap.repeat.set(2, 2)
+    if (normalMap instanceof THREE.CanvasTexture) {
+      normalMap.wrapS = THREE.RepeatWrapping
+      normalMap.wrapT = THREE.RepeatWrapping
+      normalMap.repeat.set(2, 2)
+    }
   })
 
   return normalMaps
@@ -248,7 +249,7 @@ const createCube = () => {
   scene.value.add(cube.value)
 }
 
-const getRoughness = (textureType) => {
+const getRoughness = (textureType: string) => {
   const roughnessMap = {
     wood: 0.8,
     metal: 0.3,
@@ -259,7 +260,7 @@ const getRoughness = (textureType) => {
   return roughnessMap[textureType] || 0.7
 }
 
-const getMetalness = (textureType) => {
+const getMetalness = (textureType: string) => {
   const metalnessMap = {
     wood: 0.0,
     metal: 0.8,
@@ -323,14 +324,6 @@ const onWindowResize = () => {
 // Наблюдатели за изменениями props
 watch(() => props.color, updateColor)
 watch(() => props.textureType, updateTexture)
-
-function camer22a() {
-  setInterval(() => {
-    console.log(camera.value)
-  }, 1000)
-}
-
-camer22a()
 
 onMounted(() => {
   initScene()
