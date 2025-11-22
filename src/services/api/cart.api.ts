@@ -1,6 +1,5 @@
 import type { CartItem } from '@/types/cart.types'
-import type { Product } from '@/types/product.types'
-import { mockProducts } from '@/services/mock/products.mock'
+import type { Series } from '@/types/product.types'
 
 const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -38,49 +37,56 @@ export const cartApi = {
     await delay()
 
     const cartItems = getCartData(userId)
-
-    // Обогащаем данными о продукте из mock
-    return cartItems.map((item) => {
-      const product = mockProducts.find((p) => p.id === item.productId)
-      return {
-        ...item,
-        product: product || item.product,
-      }
-    })
+    // Серии уже должны быть в данных корзины
+    return cartItems
   },
 
-  // Добавить товар в корзину
-  async addToCart(userId: string, productId: string, quantity: number): Promise<CartItem[]> {
+  // Добавить серию в корзину
+  async addToCart(userId: string, seriesId: string, quantity: number): Promise<CartItem[]> {
     await delay()
 
-    const product = mockProducts.find((p) => p.id === productId)
-    if (!product) {
-      throw new Error('Товар не найден')
+    // Загружаем серию из API
+    const { productsApi } = await import('./products.api')
+    const products = await productsApi.getProducts()
+    
+    // Ищем серию в продуктах
+    let series: Series | null = null
+    for (const product of products.products) {
+      if (product.series) {
+        const foundSeries = product.series.find((s) => String(s.id) === seriesId)
+        if (foundSeries) {
+          series = foundSeries
+          break
+        }
+      }
+    }
+
+    if (!series) {
+      throw new Error('Серия не найдена')
     }
 
     const cartItems = getCartData(userId)
-    const existingItem = cartItems.find((item) => item.productId === productId)
+    const existingItem = cartItems.find((item) => item.seriesId === seriesId)
 
     if (existingItem) {
       // Увеличиваем количество существующего товара
       existingItem.quantity += quantity
 
       // Проверка на доступное количество
-      if (existingItem.quantity > product.stock) {
-        throw new Error(`Доступно только ${product.stock} кг`)
+      if (series.amount && existingItem.quantity > series.amount) {
+        throw new Error(`Доступно только ${series.amount} кг`)
       }
     } else {
       // Добавляем новый товар
-      if (quantity > product.stock) {
-        throw new Error(`Доступно только ${product.stock} кг`)
+      if (series.amount && quantity > series.amount) {
+        throw new Error(`Доступно только ${series.amount} кг`)
       }
 
       const newItem: CartItem = {
         id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        productId: product.id,
-        product: product,
+        seriesId: seriesId,
+        series: series,
         quantity: quantity,
-        isFromStock: product.isInStock,
       }
       cartItems.push(newItem)
     }
@@ -104,17 +110,12 @@ export const cartApi = {
       throw new Error('Товар не найден в корзине')
     }
 
-    const product = mockProducts.find((p) => p.id === item.productId)
-    if (!product) {
-      throw new Error('Товар не найден')
-    }
-
     if (quantity <= 0) {
       throw new Error('Количество должно быть больше 0')
     }
 
-    if (quantity > product.stock) {
-      throw new Error(`Доступно только ${product.stock} кг`)
+    if (item.series?.amount && quantity > item.series.amount) {
+      throw new Error(`Доступно только ${item.series.amount} кг`)
     }
 
     item.quantity = quantity
@@ -154,9 +155,11 @@ export const cartApi = {
     await delay(100)
 
     const cartItems = getCartData(userId)
+    // В реальном приложении здесь будет расчет стоимости на основе серий
+    // Пока возвращаем 0, так как в сериях нет поля price
     return cartItems.reduce((total, item) => {
-      const product = mockProducts.find((p) => p.id === item.productId)
-      return total + (product ? product.price * item.quantity : 0)
+      // TODO: Добавить расчет стоимости когда будет поле price в Series
+      return total
     }, 0)
   },
 }

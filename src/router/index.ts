@@ -52,13 +52,13 @@ const router = createRouter({
       path: '/profile',
       name: 'profile',
       component: () => import('../views/user/Profile.vue'),
-      meta: { requiresAuth: true, requiredRole: UserRole.USER },
+      meta: { requiresAuth: true, requiredRole: UserRole.CLIENT_MANAGER },
     },
     {
       path: '/favorites',
       name: 'favorites',
       component: () => import('../views/user/Favorites.vue'),
-      meta: { requiresAuth: true, requiredRole: UserRole.USER },
+      meta: { requiresAuth: true, requiredRole: UserRole.CLIENT_MANAGER },
     },
 
     // Company routes (требуют компанию)
@@ -66,31 +66,31 @@ const router = createRouter({
       path: '/cart',
       name: 'cart',
       component: () => import('../views/cart/Cart.vue'),
-      meta: { requiresAuth: true, requiredRole: UserRole.COMPANY_MANAGER },
+      meta: { requiresAuth: true, requiredRole: UserRole.CLIENT_MANAGER },
     },
     {
       path: '/orders',
       name: 'orders',
       component: () => import('../views/orders/OrdersList.vue'),
-      meta: { requiresAuth: true, requiredRole: UserRole.COMPANY_MANAGER },
+      meta: { requiresAuth: true, requiredRole: UserRole.CLIENT_MANAGER },
     },
     {
       path: '/orders/:id',
       name: 'order-details',
       component: () => import('../views/orders/OrderDetails.vue'),
-      meta: { requiresAuth: true, requiredRole: UserRole.COMPANY_MANAGER },
+      meta: { requiresAuth: true, requiredRole: UserRole.CLIENT_MANAGER },
     },
     {
       path: '/company',
       name: 'company',
       component: () => import('../views/company/CompanyProfile.vue'),
-      meta: { requiresAuth: true, requiredRole: UserRole.COMPANY_MANAGER },
+      meta: { requiresAuth: true, requiredRole: UserRole.CLIENT_MANAGER },
     },
     {
       path: '/messages',
       name: 'messages',
       component: () => import('../views/messages/Messages.vue'),
-      meta: { requiresAuth: true, requiredRole: UserRole.USER },
+      meta: { requiresAuth: true, requiredRole: UserRole.CLIENT_MANAGER },
     },
 
     // Admin routes - только для system roles
@@ -164,17 +164,17 @@ router.beforeEach(
 )
 
 // Вспомогательная функция для проверки иерархии ролей
-function hasRequiredRole(userRole: UserRole, requiredRole: UserRole): boolean {
-  const hierarchy = {
-    [UserRole.GUEST]: 0,
-    [UserRole.USER]: 1,
-    [UserRole.COMPANY_MANAGER]: 2,
-    [UserRole.COMPANY_ADMIN]: 3,
-    [UserRole.SYSTEM_MANAGER]: 2,
-    [UserRole.SYSTEM_ADMIN]: 3,
+function hasRequiredRole(userRole: string | undefined, requiredRole: UserRole): boolean {
+  if (!userRole) return false
+  
+  const hierarchy: Record<string, number> = {
+    [UserRole.CLIENT_MANAGER]: 1,
+    [UserRole.CLIENT_ADMIN]: 2,
+    [UserRole.SYSTEM_MANAGER]: 3,
+    [UserRole.SYSTEM_ADMIN]: 4,
   }
 
-  return hierarchy[userRole] >= hierarchy[requiredRole]
+  return (hierarchy[userRole] || 0) >= (hierarchy[requiredRole] || 0)
 }
 
 export default router

@@ -34,8 +34,6 @@ const validateLogin = () => {
 const validatePassword = () => {
   if (!password.value) {
     errors.value.password = 'Введите пароль'
-  } else if (password.value.length < 6) {
-    errors.value.password = 'Пароль должен содержать минимум 6 символов'
   } else {
     errors.value.password = undefined
   }
@@ -50,7 +48,7 @@ const handleSubmit = async () => {
   isSubmitting.value = true
 
   try {
-    await authStore.login({ login: login.value, password: password.value })
+    await authStore.login({ email: login.value, password: password.value })
     showSuccess('Вы успешно вошли в систему')
     router.push('/')
   } catch (error: any) {
@@ -64,72 +62,39 @@ const handleSubmit = async () => {
 <template>
   <form class="space-y-6" @submit.prevent="handleSubmit">
     <div>
-      <AppInput
-        v-model="login"
-        type="email"
-        label="Email"
-        placeholder="example@company.ru"
-        :error="errors.login"
-        :full-width="true"
-        @blur="validateLogin"
-        @input="errors.login = undefined"
-      />
+      <AppInput v-model="login" type="email" label="Email" placeholder="example@company.ru" :error="errors.login"
+        :full-width="true" @blur="validateLogin" @input="errors.login = undefined" />
     </div>
 
     <div>
-      <AppInput
-        v-model="password"
-        type="password"
-        label="Пароль"
-        placeholder="Введите пароль"
-        :show-password-toggle="true"
-        :error="errors.password"
-        :full-width="true"
-        @blur="validatePassword"
-        @input="errors.password = undefined"
-      />
+      <AppInput v-model="password" type="password" label="Пароль" placeholder="Введите пароль"
+        :show-password-toggle="true" :error="errors.password" :full-width="true" @blur="validatePassword"
+        @input="errors.password = undefined" />
     </div>
 
     <div class="flex items-center justify-between">
       <label class="flex items-center gap-2">
-        <input
-          v-model="rememberMe"
-          type="checkbox"
-          class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-        />
+        <input v-model="rememberMe" type="checkbox"
+          class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary" />
         <span class="text-sm text-gray-600">Запомнить меня</span>
       </label>
 
       <slot name="forgot-password">
-        <button
-          type="button"
-          class="text-sm text-primary hover:text-primary-dark"
-          @click="$emit('forgot-password')"
-        >
+        <button type="button" class="text-sm text-primary hover:text-primary-dark" @click="$emit('forgot-password')">
           Забыли пароль?
         </button>
       </slot>
     </div>
 
-    <AppButton
-      type="submit"
-      variant="primary"
-      size="lg"
-      :full-width="true"
-      :loading="isSubmitting"
-      :disabled="!isValid || isSubmitting"
-    >
+    <AppButton type="submit" variant="primary" size="lg" :full-width="true" :loading="isSubmitting"
+      :disabled="!isValid || isSubmitting">
       Войти
     </AppButton>
 
     <slot name="register-link">
       <p class="text-center text-sm text-gray-600">
         Нет аккаунта?
-        <button
-          type="button"
-          class="text-primary hover:text-primary-dark font-medium"
-          @click="$emit('register')"
-        >
+        <button type="button" class="text-primary hover:text-primary-dark font-medium" @click="$emit('register')">
           Зарегистрироваться
         </button>
       </p>

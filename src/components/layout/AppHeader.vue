@@ -3,7 +3,6 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { usePermissions } from '@/composables/usePermissions'
-import { UserRole } from '@/types/auth.types'
 import AppButton from '@/components/common/AppButton.vue'
 
 const router = useRouter()
@@ -72,39 +71,25 @@ const isActive = (path: string) => {
         <!-- Desktop Navigation -->
         <nav class="hidden md:flex items-center gap-6">
           <template v-if="isAuthenticated">
-            <router-link
-              v-for="item in menuItems.slice(0, 5)"
-              :key="item.path"
-              :to="item.path"
-              :class="[
-                'text-sm font-medium transition-colors',
-                isActive(item.path)
-                  ? 'text-primary'
-                  : 'text-gray-600 hover:text-primary',
-              ]"
-            >
+            <router-link v-for="item in menuItems.slice(0, 5)" :key="item.path" :to="item.path" :class="[
+              'text-sm font-medium transition-colors',
+              isActive(item.path)
+                ? 'text-primary'
+                : 'text-gray-600 hover:text-primary',
+            ]">
               {{ item.label }}
             </router-link>
 
             <!-- Dropdown для остальных пунктов если их много -->
             <div v-if="menuItems.length > 5" class="relative">
-              <button
-                class="text-sm font-medium text-gray-600 hover:text-primary"
-                @click="showUserMenu = !showUserMenu"
-              >
+              <button class="text-sm font-medium text-gray-600 hover:text-primary"
+                @click="showUserMenu = !showUserMenu">
                 Ещё
               </button>
-              <div
-                v-if="showUserMenu"
-                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-400 py-2"
-              >
-                <router-link
-                  v-for="item in menuItems.slice(5)"
-                  :key="item.path"
-                  :to="item.path"
-                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  @click="showUserMenu = false"
-                >
+              <div v-if="showUserMenu"
+                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-400 py-2">
+                <router-link v-for="item in menuItems.slice(5)" :key="item.path" :to="item.path"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" @click="showUserMenu = false">
                   {{ item.label }}
                 </router-link>
               </div>
@@ -117,38 +102,30 @@ const isActive = (path: string) => {
           <template v-if="isAuthenticated">
             <!-- User Menu -->
             <div class="relative hidden md:block">
-              <button
-                class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-primary"
-                @click="showUserMenu = !showUserMenu"
-              >
+              <button class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-primary"
+                @click="showUserMenu = !showUserMenu">
                 <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
                   <span class="text-primary font-medium text-sm">
-                    {{ currentUser?.fullName.charAt(0).toUpperCase() }}
+                    {{ currentUser?.last_name.charAt(0).toUpperCase() }}
                   </span>
                 </div>
-                <span class="max-w-32 truncate">{{ currentUser?.fullName }}</span>
+                <span class="max-w-32 truncate">{{ currentUser?.last_name }} {{ currentUser?.first_name }} {{
+                  currentUser?.patronymic }}</span>
               </button>
 
-              <div
-                v-if="showUserMenu"
-                class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-400 py-2"
-              >
+              <div v-if="showUserMenu"
+                class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-400 py-2">
                 <div class="px-4 py-2 border-b border-gray-400">
-                  <p class="text-sm font-medium text-gray-900">{{ currentUser?.fullName }}</p>
+                  <p class="text-sm font-medium text-gray-900">{{ currentUser?.last_name }} {{ currentUser?.first_name
+                    }} {{ currentUser?.patronymic }}</p>
                   <p class="text-xs text-gray-600">{{ currentUser?.email }}</p>
                 </div>
-                <a
-                  href="https://primetop.ru"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
+                <a href="https://primetop.ru" target="_blank" rel="noopener noreferrer"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                   О производителе
                 </a>
-                <button
-                  class="block w-full text-left px-4 py-2 text-sm text-error hover:bg-gray-100"
-                  @click="handleLogout"
-                >
+                <button class="block w-full text-left px-4 py-2 text-sm text-error hover:bg-gray-100"
+                  @click="handleLogout">
                   Выход из аккаунта
                 </button>
               </div>
@@ -164,25 +141,11 @@ const isActive = (path: string) => {
           </template>
 
           <!-- Mobile Menu Button -->
-          <button
-            class="md:hidden p-2 text-gray-600 hover:text-primary"
-            @click="showMobileMenu = !showMobileMenu"
-          >
+          <button class="md:hidden p-2 text-gray-600 hover:text-primary" @click="showMobileMenu = !showMobileMenu">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                v-if="!showMobileMenu"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-              <path
-                v-else
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
+              <path v-if="!showMobileMenu" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 6h16M4 12h16M4 18h16" />
+              <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
@@ -192,35 +155,24 @@ const isActive = (path: string) => {
       <div v-if="showMobileMenu" class="md:hidden border-t border-gray-400 py-4">
         <template v-if="isAuthenticated">
           <div class="px-4 py-3 border-b border-gray-400 mb-2">
-            <p class="font-medium text-gray-900">{{ currentUser?.fullName }}</p>
+            <p class="font-medium text-gray-900">{{ currentUser?.last_name }} {{ currentUser?.first_name }} {{
+              currentUser?.patronymic }}</p>
             <p class="text-sm text-gray-600">{{ currentUser?.email }}</p>
           </div>
-          <router-link
-            v-for="item in menuItems"
-            :key="item.path"
-            :to="item.path"
-            :class="[
-              'block px-4 py-3 text-sm font-medium',
-              isActive(item.path)
-                ? 'text-primary bg-primary-50'
-                : 'text-gray-700 hover:bg-gray-100',
-            ]"
-            @click="showMobileMenu = false"
-          >
+          <router-link v-for="item in menuItems" :key="item.path" :to="item.path" :class="[
+            'block px-4 py-3 text-sm font-medium',
+            isActive(item.path)
+              ? 'text-primary bg-primary-50'
+              : 'text-gray-700 hover:bg-gray-100',
+          ]" @click="showMobileMenu = false">
             {{ item.label }}
           </router-link>
-          <a
-            href="https://primetop.ru"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100"
-          >
+          <a href="https://primetop.ru" target="_blank" rel="noopener noreferrer"
+            class="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100">
             О производителе
           </a>
-          <button
-            class="block w-full text-left px-4 py-3 text-sm font-medium text-error hover:bg-gray-100"
-            @click="handleLogout"
-          >
+          <button class="block w-full text-left px-4 py-3 text-sm font-medium text-error hover:bg-gray-100"
+            @click="handleLogout">
             Выход из аккаунта
           </button>
         </template>

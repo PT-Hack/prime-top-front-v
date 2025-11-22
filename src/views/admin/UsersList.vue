@@ -5,6 +5,7 @@ import { UserRole } from '@/types/auth.types'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 import { usersApi } from '@/services/api/users.api'
+import { formatters } from '@/utils/formatters'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import AppCard from '@/components/common/AppCard.vue'
 import AppButton from '@/components/common/AppButton.vue'
@@ -21,29 +22,27 @@ const deletingUser = ref<string | null>(null)
 const promotingUser = ref<string | null>(null)
 
 // Получить метку роли на русском
-const getRoleLabel = (role: UserRole): string => {
-  const labels: Record<UserRole, string> = {
-    guest: 'Гость',
-    user: 'Пользователь',
-    company_manager: 'Менеджер компании',
-    company_admin: 'Админ компании',
-    system_manager: 'Менеджер системы',
-    system_admin: 'Админ системы',
+const getRoleLabel = (roleTitle: string | undefined): string => {
+  if (!roleTitle) return 'Не указана'
+  const labels: Record<string, string> = {
+    'system-admin': 'Администратор системы',
+    'system-manager': 'Менеджер системы',
+    'client-admin': 'Клиент-админ',
+    'client-manager': 'Клиент-менеджер',
   }
-  return labels[role] || role
+  return labels[roleTitle] || roleTitle
 }
 
 // Получить цвет бейджа роли
-const getRoleBadgeColor = (role: UserRole): string => {
-  const colors: Record<UserRole, string> = {
-    guest: 'bg-gray-100 text-gray-800',
-    user: 'bg-blue-100 text-blue-800',
-    company_manager: 'bg-green-100 text-green-800',
-    company_admin: 'bg-purple-100 text-purple-800',
-    system_manager: 'bg-orange-100 text-orange-800',
-    system_admin: 'bg-red-100 text-red-800',
+const getRoleBadgeColor = (roleTitle: string | undefined): string => {
+  if (!roleTitle) return 'bg-gray-100 text-gray-800'
+  const colors: Record<string, string> = {
+    'system-admin': 'bg-red-100 text-red-800',
+    'system-manager': 'bg-orange-100 text-orange-800',
+    'client-admin': 'bg-purple-100 text-purple-800',
+    'client-manager': 'bg-green-100 text-green-800',
   }
-  return colors[role] || 'bg-gray-100 text-gray-800'
+  return colors[roleTitle] || 'bg-gray-100 text-gray-800'
 }
 
 // Отфильтрованные пользователи
@@ -55,14 +54,14 @@ const filteredUsers = computed(() => {
     const query = searchQuery.value.toLowerCase()
     result = result.filter(
       (user) =>
-        user.fullName.toLowerCase().includes(query) ||
+        formatters.fullName(user).toLowerCase().includes(query) ||
         user.email.toLowerCase().includes(query)
     )
   }
 
   // Фильтр по роли
   if (roleFilter.value !== 'all') {
-    result = result.filter((user) => user.role === roleFilter.value)
+    result = result.filter((user) => user.role?.title === roleFilter.value)
   }
 
   return result
@@ -71,11 +70,10 @@ const filteredUsers = computed(() => {
 // Статистика по ролям
 const stats = computed(() => ({
   total: users.value.length,
-  user: users.value.filter((u) => u.role === UserRole.USER).length,
-  companyManager: users.value.filter((u) => u.role === UserRole.COMPANY_MANAGER).length,
-  companyAdmin: users.value.filter((u) => u.role === UserRole.COMPANY_ADMIN).length,
-  systemManager: users.value.filter((u) => u.role === UserRole.SYSTEM_MANAGER).length,
-  systemAdmin: users.value.filter((u) => u.role === UserRole.SYSTEM_ADMIN).length,
+  clientManager: users.value.filter((u) => u.role?.title === UserRole.CLIENT_MANAGER).length,
+  clientAdmin: users.value.filter((u) => u.role?.title === UserRole.CLIENT_ADMIN).length,
+  systemManager: users.value.filter((u) => u.role?.title === UserRole.SYSTEM_MANAGER).length,
+  systemAdmin: users.value.filter((u) => u.role?.title === UserRole.SYSTEM_ADMIN).length,
 }))
 
 // Загрузка пользователей
@@ -132,8 +130,8 @@ const handlePromoteToSystemManager = async (userId: string) => {
 
     // Обновляем локально
     const user = users.value.find((u) => u.id === userId)
-    if (user) {
-      user.role = UserRole.SYSTEM_MANAGER
+    if (user && user.role) {
+      user.role.title = UserRole.SYSTEM_MANAGER
     }
 
     showToast('Пользователь повышен до менеджера системы', 'success')
@@ -178,24 +176,17 @@ onMounted(() => {
           </div>
         </AppCard>
 
-        <AppCard class="cursor-pointer hover:shadow-lg transition-shadow" @click="roleFilter = UserRole.USER">
+        <AppCard class="cursor-pointer hover:shadow-lg transition-shadow" @click="roleFilter = UserRole.CLIENT_MANAGER">
           <div class="text-center">
-            <div class="text-2xl font-bold text-blue-600">{{ stats.user }}</div>
-            <div class="text-xs text-gray-600 mt-1">Пользователи</div>
+            <div class="text-2xl font-bold text-green-600">{{ stats.clientManager }}</div>
+            <div class="text-xs text-gray-600 mt-1">Клиент-менеджеры</div>
           </div>
         </AppCard>
 
-        <AppCard class="cursor-pointer hover:shadow-lg transition-shadow" @click="roleFilter = UserRole.COMPANY_MANAGER">
+        <AppCard class="cursor-pointer hover:shadow-lg transition-shadow" @click="roleFilter = UserRole.CLIENT_ADMIN">
           <div class="text-center">
-            <div class="text-2xl font-bold text-green-600">{{ stats.companyManager }}</div>
-            <div class="text-xs text-gray-600 mt-1">Менеджеры</div>
-          </div>
-        </AppCard>
-
-        <AppCard class="cursor-pointer hover:shadow-lg transition-shadow" @click="roleFilter = UserRole.COMPANY_ADMIN">
-          <div class="text-center">
-            <div class="text-2xl font-bold text-purple-600">{{ stats.companyAdmin }}</div>
-            <div class="text-xs text-gray-600 mt-1">Админы комп.</div>
+            <div class="text-2xl font-bold text-purple-600">{{ stats.clientAdmin }}</div>
+            <div class="text-xs text-gray-600 mt-1">Клиент-админы</div>
           </div>
         </AppCard>
 
@@ -239,37 +230,26 @@ onMounted(() => {
               Все
             </button>
             <button
-              @click="roleFilter = UserRole.USER"
+              @click="roleFilter = UserRole.CLIENT_MANAGER"
               :class="[
                 'px-3 py-2 rounded-lg text-sm font-medium transition-colors border-2',
-                roleFilter === UserRole.USER
+                roleFilter === UserRole.CLIENT_MANAGER
                   ? 'bg-[#054787] text-white border-[#054787]'
                   : 'bg-white text-gray-700 border-gray-300 hover:border-[#054787] hover:bg-gray-50',
               ]"
             >
-              Пользователи
+              Клиент-менеджеры
             </button>
             <button
-              @click="roleFilter = UserRole.COMPANY_MANAGER"
+              @click="roleFilter = UserRole.CLIENT_ADMIN"
               :class="[
                 'px-3 py-2 rounded-lg text-sm font-medium transition-colors border-2',
-                roleFilter === UserRole.COMPANY_MANAGER
+                roleFilter === UserRole.CLIENT_ADMIN
                   ? 'bg-[#054787] text-white border-[#054787]'
                   : 'bg-white text-gray-700 border-gray-300 hover:border-[#054787] hover:bg-gray-50',
               ]"
             >
-              Менеджеры
-            </button>
-            <button
-              @click="roleFilter = UserRole.COMPANY_ADMIN"
-              :class="[
-                'px-3 py-2 rounded-lg text-sm font-medium transition-colors border-2',
-                roleFilter === UserRole.COMPANY_ADMIN
-                  ? 'bg-[#054787] text-white border-[#054787]'
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-[#054787] hover:bg-gray-50',
-              ]"
-            >
-              Админы
+              Клиент-админы
             </button>
           </div>
         </div>
@@ -301,10 +281,10 @@ onMounted(() => {
                 <td class="px-4 py-3">
                   <div class="flex items-center">
                     <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
-                      {{ user.fullName.charAt(0).toUpperCase() }}
+                      {{ user.last_name?.charAt(0).toUpperCase() || 'U' }}
                     </div>
                     <div class="ml-3">
-                      <div class="font-medium text-text">{{ user.fullName }}</div>
+                      <div class="font-medium text-text">{{ formatters.fullName(user) }}</div>
                       <div class="text-xs text-gray-500">{{ user.email }}</div>
                     </div>
                   </div>
@@ -313,22 +293,23 @@ onMounted(() => {
                   {{ user.email }}
                 </td>
                 <td class="px-4 py-3">
-                  <span :class="['px-2 py-1 rounded text-xs font-medium', getRoleBadgeColor(user.role)]">
-                    {{ getRoleLabel(user.role) }}
+                  <span :class="['px-2 py-1 rounded text-xs font-medium', getRoleBadgeColor(user.role?.title)]">
+                    {{ getRoleLabel(user.role?.title) }}
                   </span>
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-600">
-                  <span v-if="user.companyId">Да</span>
+                  <span v-if="user.company_id">Да</span>
                   <span v-else class="text-gray-400">Нет</span>
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-600">
-                  {{ formatDate(user.createdAt) }}
+                  <span v-if="user.email_verified_at">{{ formatDate(user.email_verified_at) }}</span>
+                  <span v-else class="text-gray-400">Не подтвержден</span>
                 </td>
                 <td class="px-4 py-3 text-right">
                   <div v-if="user.id !== currentUser?.id" class="flex justify-end gap-2">
                     <!-- Кнопка повышения до system_manager -->
                     <AppButton
-                      v-if="user.role !== UserRole.SYSTEM_MANAGER && user.role !== UserRole.SYSTEM_ADMIN"
+                      v-if="user.role?.title !== UserRole.SYSTEM_MANAGER && user.role?.title !== UserRole.SYSTEM_ADMIN"
                       variant="primary"
                       size="sm"
                       :loading="promotingUser === user.id"

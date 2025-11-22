@@ -5,24 +5,23 @@ export enum InvitationStatus {
   PENDING = 'pending',
   ACCEPTED = 'accepted',
   REJECTED = 'rejected',
+  CANCELED = 'canceled',
 }
 
 export interface Invitation {
   id: string
-  companyId: string
-  company: Company
-  invitedUserId: string
-  invitedUser: User
-  invitedByUserId: string
-  invitedByUser: User
+  user_id: string
+  company_id: string
   status: InvitationStatus
-  message?: string
-  createdAt: string
-  respondedAt?: string
+  user?: User
+  company?: Company
 }
 
 export interface CreateInvitationData {
-  companyId: string
-  invitedUserId: string
-  message?: string
+  user_id: string
+  company_id: string
+}
+
+export interface UpdateInvitationData {
+  status: InvitationStatus
 }

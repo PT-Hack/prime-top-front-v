@@ -11,17 +11,19 @@ const router = useRouter()
 const authStore = useAuthStore()
 const { showError, showSuccess } = useNotifications()
 
-const fullName = ref('')
+const last_name = ref('')
+const first_name = ref('')
+const patronymic = ref('')
 const email = ref('')
-const phone = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const agreeToTerms = ref(false)
 
 const errors = ref<{
-  fullName?: string
+  last_name?: string
+  first_name?: string
+  patronymic?: string
   email?: string
-  phone?: string
   password?: string
   confirmPassword?: string
 }>({})
@@ -30,26 +32,37 @@ const isSubmitting = ref(false)
 
 const isValid = computed(() => {
   return (
-    fullName.value &&
+    last_name.value &&
+    first_name.value &&
     email.value &&
     password.value &&
     confirmPassword.value &&
     agreeToTerms.value &&
-    !errors.value.fullName &&
+    !errors.value.last_name &&
+    !errors.value.first_name &&
     !errors.value.email &&
-    !errors.value.phone &&
     !errors.value.password &&
     !errors.value.confirmPassword
   )
 })
 
-const validateFullName = () => {
-  if (!fullName.value) {
-    errors.value.fullName = 'Введите ФИО'
-  } else if (fullName.value.length < 3) {
-    errors.value.fullName = 'ФИО должно содержать минимум 3 символа'
+const validateLastName = () => {
+  if (!last_name.value) {
+    errors.value.last_name = 'Введите фамилию'
+  } else if (last_name.value.length < 2) {
+    errors.value.last_name = 'Фамилия должна содержать минимум 2 символа'
   } else {
-    errors.value.fullName = undefined
+    errors.value.last_name = undefined
+  }
+}
+
+const validateFirstName = () => {
+  if (!first_name.value) {
+    errors.value.first_name = 'Введите имя'
+  } else if (first_name.value.length < 2) {
+    errors.value.first_name = 'Имя должно содержать минимум 2 символа'
+  } else {
+    errors.value.first_name = undefined
   }
 }
 
@@ -60,14 +73,6 @@ const validateEmail = () => {
     errors.value.email = 'Неверный формат email'
   } else {
     errors.value.email = undefined
-  }
-}
-
-const validatePhone = () => {
-  if (phone.value && !validators.phone(phone.value)) {
-    errors.value.phone = 'Неверный формат телефона'
-  } else {
-    errors.value.phone = undefined
   }
 }
 
@@ -92,9 +97,9 @@ const validateConfirmPassword = () => {
 }
 
 const handleSubmit = async () => {
-  validateFullName()
+  validateLastName()
+  validateFirstName()
   validateEmail()
-  validatePhone()
   validatePassword()
   validateConfirmPassword()
 
@@ -104,10 +109,12 @@ const handleSubmit = async () => {
 
   try {
     await authStore.register({
-      login: email.value,
+      last_name: last_name.value,
+      first_name: first_name.value,
+      patronymic: patronymic.value || null,
+      email: email.value,
       password: password.value,
-      fullName: fullName.value,
-      phone: phone.value || undefined,
+      password_confirmation: confirmPassword.value,
     })
     showSuccess('Регистрация успешна! Добро пожаловать!')
     router.push('/')
@@ -123,14 +130,39 @@ const handleSubmit = async () => {
   <form class="space-y-6" @submit.prevent="handleSubmit">
     <div>
       <AppInput
-        v-model="fullName"
+        v-model="last_name"
         type="text"
-        label="ФИО"
-        placeholder="Иванов Иван Иванович"
-        :error="errors.fullName"
+        label="Фамилия"
+        placeholder="Иванов"
+        :error="errors.last_name"
         :full-width="true"
-        @blur="validateFullName"
-        @input="errors.fullName = undefined"
+        @blur="validateLastName"
+        @input="errors.last_name = undefined"
+      />
+    </div>
+
+    <div>
+      <AppInput
+        v-model="first_name"
+        type="text"
+        label="Имя"
+        placeholder="Иван"
+        :error="errors.first_name"
+        :full-width="true"
+        @blur="validateFirstName"
+        @input="errors.first_name = undefined"
+      />
+    </div>
+
+    <div>
+      <AppInput
+        v-model="patronymic"
+        type="text"
+        label="Отчество (необязательно)"
+        placeholder="Иванович"
+        :error="errors.patronymic"
+        :full-width="true"
+        @input="errors.patronymic = undefined"
       />
     </div>
 
@@ -144,19 +176,6 @@ const handleSubmit = async () => {
         :full-width="true"
         @blur="validateEmail"
         @input="errors.email = undefined"
-      />
-    </div>
-
-    <div>
-      <AppInput
-        v-model="phone"
-        type="tel"
-        label="Телефон (необязательно)"
-        placeholder="+7 (999) 123-45-67"
-        :error="errors.phone"
-        :full-width="true"
-        @blur="validatePhone"
-        @input="errors.phone = undefined"
       />
     </div>
 

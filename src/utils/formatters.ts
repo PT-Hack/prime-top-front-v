@@ -78,4 +78,20 @@ export const formatters = {
   kpp: (value: string): string => {
     return value.replace(/(\d{4})(\d{2})(\d{3})/, '$1 $2 $3')
   },
+
+  // Форматирование полного имени пользователя
+  fullName: (user: { last_name: string; first_name: string; patronymic?: string | null } | null | undefined): string => {
+    if (!user) return ''
+    const parts = [user.last_name, user.first_name]
+    if (user.patronymic) {
+      parts.push(user.patronymic)
+    }
+    return parts.join(' ')
+  },
+
+  // Получение инициала из имени
+  initial: (user: { last_name: string; first_name: string; patronymic?: string | null } | null | undefined): string => {
+    if (!user) return ''
+    return user.last_name.charAt(0).toUpperCase()
+  },
 }

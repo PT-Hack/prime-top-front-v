@@ -32,7 +32,9 @@ export const usersApi = {
     }
 
     // Обновляем роль
-    user.role = newRole
+    if (user.role) {
+      user.role.title = newRole
+    }
 
     return user
   },

@@ -24,7 +24,7 @@ const orderId = computed(() => route.params.id as string)
 // Можно ли отменить заказ
 const canCancelOrder = computed(() => {
   if (!order.value) return false
-  return !['delivered', 'shipped', 'cancelled'].includes(order.value.status)
+  return order.value.status !== 'canceled' && order.value.status !== 'accepted'
 })
 
 // Загрузка заказа
@@ -92,10 +92,6 @@ const handleOpenChat = () => {
   // В Stage 12 будет: router.push(`/messages?orderId=${order.value.id}`)
 }
 
-// Переход к товару
-const goToProduct = (productId: string) => {
-  router.push(`/products/${productId}`)
-}
 
 // Вернуться к списку
 const goBack = () => {
@@ -147,18 +143,13 @@ onMounted(() => {
               </div>
               <div class="text-sm text-gray-600 space-y-1">
                 <div>
-                  <span class="font-medium">Дата создания:</span>
-                  {{ formatDate(order.createdAt) }}
-                </div>
-                <div>
-                  <span class="font-medium">Последнее обновление:</span>
-                  {{ formatDate(order.updatedAt) }}
+                  <span class="font-medium">Дата:</span>
+                  {{ formatDate(order.date) }}
                 </div>
               </div>
             </div>
 
             <div class="text-right">
-              <div class="text-3xl font-bold text-primary mb-4">{{ formatPrice(order.total) }}</div>
               <div class="flex flex-col gap-2">
                 <AppButton
                   v-if="canCancelOrder"
@@ -184,117 +175,57 @@ onMounted(() => {
             <div class="space-y-3 text-sm">
               <div>
                 <div class="text-gray-500 mb-1">Компания</div>
-                <div class="font-medium text-text">{{ order.companyName }}</div>
+                <div class="font-medium text-text">{{ order.company_id }}</div>
               </div>
               <div>
                 <div class="text-gray-500 mb-1">Создал заказ</div>
-                <div class="font-medium text-text">{{ order.createdByName }}</div>
-              </div>
-              <div v-if="order.assignedManagerName">
-                <div class="text-gray-500 mb-1">Менеджер производителя</div>
-                <div class="font-medium text-text">{{ order.assignedManagerName }}</div>
-              </div>
-              <div v-else>
-                <div class="text-gray-500 mb-1">Менеджер производителя</div>
-                <div class="text-yellow-600">Ожидает назначения</div>
+                <div class="font-medium text-text">{{ order.user?.first_name }} {{ order.user?.last_name }}</div>
               </div>
             </div>
           </AppCard>
 
-          <!-- Примечания -->
-          <AppCard>
-            <h2 class="text-xl font-semibold text-text mb-4">Примечания к заказу</h2>
-            <div v-if="order.notes" class="text-sm text-gray-700">
-              {{ order.notes }}
-            </div>
-            <div v-else class="text-sm text-gray-400 italic">Примечаний нет</div>
-          </AppCard>
         </div>
 
-        <!-- Список товаров -->
+        <!-- Список серий -->
         <AppCard>
           <h2 class="text-xl font-semibold text-text mb-4">
-            Товары ({{ order.items.length }})
+            Серии ({{ order.series?.length || 0 }})
           </h2>
 
-          <div class="space-y-4">
+          <div v-if="order.series && order.series.length > 0" class="space-y-4">
             <div
-              v-for="item in order.items"
-              :key="item.id"
-              class="flex flex-col md:flex-row gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-              @click="goToProduct(item.productId)"
+              v-for="orderSeries in order.series"
+              :key="orderSeries.series_id"
+              class="flex flex-col md:flex-row gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              <!-- Изображение товара -->
-              <div class="flex-shrink-0">
-                <img
-                  v-if="item.product.image"
-                  :src="item.product.image"
-                  :alt="item.product.name"
-                  class="w-24 h-24 object-cover rounded-lg"
-                />
-                <div v-else class="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
-              </div>
-
-              <!-- Информация о товаре -->
+              <!-- Информация о серии -->
               <div class="flex-1">
-                <h3 class="font-semibold text-text mb-2">{{ item.product.name }}</h3>
+                <h3 class="font-semibold text-text mb-2">
+                  {{ orderSeries.series?.title || `Серия #${orderSeries.series_id}` }}
+                </h3>
 
-                <div class="flex items-center gap-2 mb-2">
-                  <span
-                    v-if="item.product.ralColor"
-                    class="inline-flex items-center gap-2 text-xs text-gray-600"
-                  >
-                    <span
-                      class="w-4 h-4 rounded border border-gray-300"
-                      :style="{ backgroundColor: item.product.ralColorHex }"
-                    ></span>
-                    {{ item.product.ralColor }}
-                  </span>
-                </div>
-
-                <div class="text-sm text-gray-600">
-                  <span
-                    :class="[
-                      'inline-block px-2 py-1 rounded text-xs',
-                      item.isFromStock
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800',
-                    ]"
-                  >
-                    {{ item.isFromStock ? 'Со склада' : 'Под заказ' }}
-                  </span>
+                <div class="text-sm text-gray-600 space-y-1">
+                  <div v-if="orderSeries.series?.amount !== null && orderSeries.series?.amount !== undefined">
+                    <span class="font-medium">Доступно:</span> {{ orderSeries.series.amount }} кг
+                  </div>
+                  <div v-if="orderSeries.series?.product_id">
+                    <span class="font-medium">ID продукта:</span> {{ orderSeries.series.product_id }}
+                  </div>
                 </div>
               </div>
 
-              <!-- Количество и цена -->
+              <!-- Количество -->
               <div class="flex flex-col items-end justify-between">
                 <div class="text-right">
                   <div class="text-lg font-semibold text-text">
-                    {{ formatPrice(item.price * item.quantity) }}
-                  </div>
-                  <div class="text-sm text-gray-500">
-                    {{ formatPrice(item.price) }} × {{ item.quantity }} шт.
+                    Количество: {{ orderSeries.amount }} кг
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-          <!-- Итого -->
-          <div class="mt-6 pt-6 border-t border-gray-200">
-            <div class="flex justify-between items-center">
-              <span class="text-xl font-semibold text-text">Итого:</span>
-              <span class="text-2xl font-bold text-primary">{{ formatPrice(order.total) }}</span>
-            </div>
+          <div v-else class="text-center py-8 text-gray-500">
+            Нет серий в заказе
           </div>
         </AppCard>
       </div>
@@ -317,3 +248,6 @@ onMounted(() => {
     </div>
   </MainLayout>
 </template>
+
+
+

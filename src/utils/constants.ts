@@ -2,41 +2,31 @@ import { UserRole } from '@/types/auth.types'
 import { OrderStatus } from '@/types/order.types'
 
 export const ROLE_HIERARCHY = {
-  [UserRole.GUEST]: 0,
-  [UserRole.USER]: 1,
-  [UserRole.COMPANY_MANAGER]: 2,
-  [UserRole.COMPANY_ADMIN]: 3,
-  [UserRole.SYSTEM_MANAGER]: 2,
-  [UserRole.SYSTEM_ADMIN]: 3,
+  [UserRole.CLIENT_MANAGER]: 1,
+  [UserRole.CLIENT_ADMIN]: 2,
+  [UserRole.SYSTEM_MANAGER]: 3,
+  [UserRole.SYSTEM_ADMIN]: 4,
 }
 
 export const ROLE_LABELS = {
-  [UserRole.GUEST]: 'Посетитель',
-  [UserRole.USER]: 'Пользователь',
-  [UserRole.COMPANY_MANAGER]: 'Менеджер компании',
-  [UserRole.COMPANY_ADMIN]: 'Админ компании',
+  [UserRole.CLIENT_MANAGER]: 'Клиент-менеджер',
+  [UserRole.CLIENT_ADMIN]: 'Клиент-админ',
   [UserRole.SYSTEM_MANAGER]: 'Менеджер системы',
-  [UserRole.SYSTEM_ADMIN]: 'Админ системы',
+  [UserRole.SYSTEM_ADMIN]: 'Администратор системы',
 }
 
 export const ORDER_STATUS_LABELS = {
-  [OrderStatus.NEW]: 'Новый',
   [OrderStatus.PENDING]: 'В ожидании',
-  [OrderStatus.CONFIRMED]: 'Подтвержден',
-  [OrderStatus.IN_PROGRESS]: 'В обработке',
-  [OrderStatus.SHIPPED]: 'Отправлен',
-  [OrderStatus.DELIVERED]: 'Доставлен',
-  [OrderStatus.CANCELLED]: 'Отменен',
+  [OrderStatus.ACCEPTED]: 'Принят',
+  [OrderStatus.REJECTED]: 'Отклонен',
+  [OrderStatus.CANCELED]: 'Отменен',
 }
 
 export const ORDER_STATUS_COLORS = {
-  [OrderStatus.NEW]: 'blue',
   [OrderStatus.PENDING]: 'yellow',
-  [OrderStatus.CONFIRMED]: 'green',
-  [OrderStatus.IN_PROGRESS]: 'cyan',
-  [OrderStatus.SHIPPED]: 'purple',
-  [OrderStatus.DELIVERED]: 'green',
-  [OrderStatus.CANCELLED]: 'red',
+  [OrderStatus.ACCEPTED]: 'green',
+  [OrderStatus.REJECTED]: 'red',
+  [OrderStatus.CANCELED]: 'gray',
 }
 
 export const PAGINATION = {

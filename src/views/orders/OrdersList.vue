@@ -1,9 +1,31 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import type { Order, OrderStatus, OrderFilters } from '@/types/order.types'
+import type { Order, OrderFilters } from '@/types/order.types'
+import { OrderStatus } from '@/types/order.types'
 import { useAuth } from '@/composables/useAuth'
-import { ordersApi, getOrderStatusLabel, getOrderStatusColor } from '@/services/api/orders.api'
+import { ordersApi } from '@/services/api/orders.api'
+import { formatters } from '@/utils/formatters'
+
+const getOrderStatusLabel = (status: OrderStatus): string => {
+  const labels: Record<OrderStatus, string> = {
+    [OrderStatus.PENDING]: 'В ожидании',
+    [OrderStatus.ACCEPTED]: 'Принят',
+    [OrderStatus.REJECTED]: 'Отклонен',
+    [OrderStatus.CANCELED]: 'Отменен',
+  }
+  return labels[status] || status
+}
+
+const getOrderStatusColor = (status: OrderStatus): string => {
+  const colors: Record<OrderStatus, string> = {
+    [OrderStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
+    [OrderStatus.ACCEPTED]: 'bg-green-100 text-green-800',
+    [OrderStatus.REJECTED]: 'bg-red-100 text-red-800',
+    [OrderStatus.CANCELED]: 'bg-gray-100 text-gray-800',
+  }
+  return colors[status] || 'bg-gray-100 text-gray-800'
+}
 import MainLayout from '@/components/layout/MainLayout.vue'
 import AppCard from '@/components/common/AppCard.vue'
 import AppButton from '@/components/common/AppButton.vue'
@@ -38,15 +60,13 @@ const filteredOrders = computed(() => {
 
   // Фильтр по вкладке
   if (activeStatusTab.value === 'new') {
-    result = result.filter((order) => order.status === 'new')
+    result = result.filter((order) => order.status === 'pending')
   } else if (activeStatusTab.value === 'active') {
-    result = result.filter((order) =>
-      ['pending', 'confirmed', 'in_progress', 'shipped'].includes(order.status),
-    )
+    result = result.filter((order) => order.status === 'accepted')
   } else if (activeStatusTab.value === 'completed') {
-    result = result.filter((order) => order.status === 'delivered')
+    result = result.filter((order) => order.status === 'accepted')
   } else if (activeStatusTab.value === 'cancelled') {
-    result = result.filter((order) => order.status === 'cancelled')
+    result = result.filter((order) => order.status === 'canceled')
   }
 
   return result
@@ -60,11 +80,20 @@ const loadOrders = async () => {
 
   try {
     // Загружаем заказы
-    const companyId = currentUser.value.companyId
-    orders.value = await ordersApi.getOrders(currentUser.value.id, companyId, filters.value)
+    const companyId = currentUser.value.company_id
+    orders.value = await ordersApi.getOrders({
+      company_id: companyId,
+      user_id: currentUser.value.id
+    })
 
-    // Загружаем статистику
-    stats.value = await ordersApi.getOrdersStats(companyId)
+    // Подсчитываем статистику
+    stats.value = {
+      total: orders.value.length,
+      new: orders.value.filter(o => o.status === 'pending').length,
+      inProgress: orders.value.filter(o => o.status === 'accepted').length,
+      completed: orders.value.filter(o => o.status === 'accepted').length,
+      cancelled: orders.value.filter(o => o.status === 'canceled').length,
+    }
   } catch (error) {
     console.error('Ошибка загрузки заказов:', error)
   } finally {
@@ -84,14 +113,6 @@ const formatDate = (dateString: string): string => {
   }).format(date)
 }
 
-// Форматирование суммы
-const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
-    minimumFractionDigits: 0,
-  }).format(price)
-}
 
 // Переход к деталям заказа
 const goToOrderDetails = (orderId: string) => {
@@ -218,28 +239,22 @@ onMounted(() => {
 
               <div class="text-sm text-gray-600 space-y-1">
                 <div>
-                  <span class="font-medium">Дата создания:</span>
-                  {{ formatDate(order.createdAt) }}
+                  <span class="font-medium">Дата:</span>
+                  {{ formatDate(order.date) }}
                 </div>
-                <div>
+                <div v-if="order.user">
                   <span class="font-medium">Создал:</span>
-                  {{ order.createdByName }}
-                </div>
-                <div v-if="order.assignedManagerName">
-                  <span class="font-medium">Менеджер:</span>
-                  {{ order.assignedManagerName }}
+                  {{ order.user.first_name }} {{ order.user.last_name }}
                 </div>
                 <div>
-                  <span class="font-medium">Позиций:</span>
-                  {{ order.items.length }}
+                  <span class="font-medium">Серий:</span>
+                  {{ order.series?.length || 0 }}
                 </div>
               </div>
             </div>
 
-            <!-- Сумма и действия -->
+            <!-- Действия -->
             <div class="flex flex-col items-end gap-3">
-              <div class="text-2xl font-bold text-primary">{{ formatPrice(order.total) }}</div>
-
               <AppButton variant="primary" size="sm" @click.stop="goToOrderDetails(order.id)">
                 Подробнее
               </AppButton>

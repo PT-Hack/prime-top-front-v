@@ -10,8 +10,6 @@ import MainLayout from '@/components/layout/MainLayout.vue'
 import AppCard from '@/components/common/AppCard.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppLoader from '@/components/common/AppLoader.vue'
-import Dialog from 'primevue/dialog'
-import ColorPreview from './ColorPreview.vue'
 const router = useRouter()
 const route = useRoute()
 const { currentUser, hasCompany } = useAuth()
@@ -21,13 +19,19 @@ const loading = ref(false)
 const product = ref<Product | null>(null)
 const quantity = ref(1)
 const addingToCart = ref(false)
+const selectedSeries = ref<string | null>(null)
 
-const colorPreviewVisible = ref(false)
 const productId = computed(() => route.params.id as string)
+
+// Первая доступная серия
+const firstSeries = computed(() => {
+  if (!product.value?.series || product.value.series.length === 0) return null
+  return product.value.series[0]
+})
 
 // Можно ли добавить в корзину
 const canAddToCart = computed(() => {
-  return hasCompany.value && product.value && product.value.isInStock
+  return hasCompany.value && product.value && firstSeries.value && (firstSeries.value.amount || 0) > 0
 })
 
 // Форматирование цены
@@ -70,22 +74,28 @@ const loadProduct = async () => {
 
 // Добавить в корзину
 const handleAddToCart = async () => {
-  if (!currentUser.value || !product.value) return
+  if (!currentUser.value || !product.value || !selectedSeries.value) return
+
+  const series = product.value.series?.find(s => String(s.id) === selectedSeries.value)
+  if (!series) {
+    showToast('Выберите серию', 'error')
+    return
+  }
 
   if (quantity.value <= 0) {
     showToast('Укажите количество', 'error')
     return
   }
 
-  if (quantity.value > product.value.stock) {
-    showToast(`Доступно только ${product.value.stock} кг`, 'error')
+  if (series.amount !== null && series.amount !== undefined && quantity.value > series.amount) {
+    showToast(`Доступно только ${series.amount} кг`, 'error')
     return
   }
 
   addingToCart.value = true
 
   try {
-    await cartApi.addToCart(currentUser.value.id, product.value.id, quantity.value)
+    await cartApi.addToCart(currentUser.value.id, selectedSeries.value, quantity.value)
     showToast('Товар добавлен в корзину', 'success')
     quantity.value = 1
   } catch (error: any) {
@@ -102,7 +112,11 @@ const goBack = () => {
 }
 
 onMounted(() => {
-  loadProduct()
+  loadProduct().then(() => {
+    if (firstSeries.value) {
+      selectedSeries.value = String(firstSeries.value.id)
+    }
+  })
 })
 </script>
 
@@ -125,8 +139,15 @@ onMounted(() => {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Изображение -->
           <AppCard>
-            <div class="aspect-square overflow-hidden rounded-lg bg-gray-100">
-              <img :src="product.image" :alt="product.name" class="w-full h-full object-cover" />
+            <div class="aspect-square overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
+              <svg class="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
             </div>
           </AppCard>
 
@@ -136,72 +157,53 @@ onMounted(() => {
               <div class="space-y-4">
                 <!-- Заголовок -->
                 <div>
-                  <h1 class="text-3xl font-bold text-text mb-2">{{ product.name }}</h1>
-                  <p class="text-gray-600">{{ product.nomenclatureName }}</p>
+                  <h1 class="text-3xl font-bold text-text mb-2">{{ product.nomenclature }}</h1>
+                  <p v-if="product.client" class="text-gray-600">Клиент: {{ product.client }}</p>
                 </div>
 
-                <!-- Цена и наличие -->
-                <div class="flex items-center gap-4">
-                  <div class="text-3xl font-bold text-primary">
-                    {{ formatPrice(product.price) }}
+                <!-- Серии -->
+                <div v-if="product.series && product.series.length > 0" class="space-y-3">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Выберите серию
+                    </label>
+                    <select
+                      v-model="selectedSeries"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option v-for="series in product.series" :key="series.id" :value="String(series.id)">
+                        {{ series.title || `Серия #${series.id}` }} 
+                        <span v-if="series.amount !== null && series.amount !== undefined">
+                          ({{ series.amount }} кг)
+                        </span>
+                      </option>
+                    </select>
                   </div>
-                  <span
-                    :class="[
-                      'px-3 py-1 rounded-full text-sm font-medium',
-                      product.isInStock ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800',
-                    ]"
-                  >
-                    {{ product.isInStock ? 'В наличии' : 'Нет в наличии' }}
-                  </span>
-                  <span
-                    v-if="product.isPromotion"
-                    class="px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800"
-                  >
-                    Акция
-                  </span>
-                </div>
 
-                <!-- Наличие на складе -->
-                <div v-if="product.isInStock" class="text-sm text-gray-600">
-                  На складе: <span class="font-semibold">{{ product.stock }} кг</span>
-                </div>
-                <Dialog
-                  draggable="false"
-                  class="bg-white border-1 border-black w-1/2 text-black rounded-2xl p-4"
-                  header="Предпросмотр цвета"
-                  v-model:visible="colorPreviewVisible"
-                >
-                  <ColorPreview :color="product.ralColorHex" />
-                </Dialog>
-                <!-- RAL цвет -->
-                <div class="flex items-center gap-3">
-                  <span class="text-gray-600">RAL цвет:</span>
-                  <div
-                    @click="colorPreviewVisible = true"
-                    class="flex cursor-pointer items-center gap-2"
-                  >
-                    <div
-                      class="w-8 h-8 rounded border border-gray-300"
-                      :style="{ backgroundColor: product.ralColorHex }"
-                    ></div>
-                    <span class="font-semibold">{{ product.ralColor }}</span>
+                  <!-- Информация о выбранной серии -->
+                  <div v-if="selectedSeries" class="p-3 bg-gray-50 rounded-lg">
+                    <div v-for="series in product.series" :key="series.id">
+                      <template v-if="String(series.id) === selectedSeries">
+                        <div class="space-y-2 text-sm">
+                          <div v-if="series.amount !== null && series.amount !== undefined">
+                            <span class="text-gray-600">В наличии:</span>
+                            <span class="font-semibold ml-2">{{ series.amount }} кг</span>
+                          </div>
+                          <div v-if="series.title">
+                            <span class="text-gray-600">Название:</span>
+                            <span class="font-semibold ml-2">{{ series.title }}</span>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
                   </div>
                 </div>
-
-                <!-- Категория -->
-                <div class="flex items-center gap-3">
-                  <span class="text-gray-600">Категория:</span>
-                  <span class="font-semibold">{{ product.category }}</span>
-                </div>
-
-                <!-- Расчетная доставка -->
-                <div v-if="product.estimatedDelivery" class="flex items-center gap-3">
-                  <span class="text-gray-600">Расчетная доставка:</span>
-                  <span class="font-semibold">{{ product.estimatedDelivery }}</span>
+                <div v-else class="text-sm text-gray-500">
+                  Нет доступных серий
                 </div>
 
                 <!-- Добавление в корзину (только для пользователей компаний) -->
-                <div v-if="canAddToCart" class="border-t pt-4 mt-4">
+                <div v-if="canAddToCart && selectedSeries" class="border-t pt-4 mt-4">
                   <div class="space-y-3">
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -211,7 +213,7 @@ onMounted(() => {
                         v-model.number="quantity"
                         type="number"
                         min="1"
-                        :max="product.stock"
+                        :max="product.series?.find(s => String(s.id) === selectedSeries)?.amount || 999999"
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                     </div>
@@ -245,69 +247,30 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Описание -->
-        <AppCard v-if="product.description">
-          <h2 class="text-2xl font-semibold text-text mb-4">Описание</h2>
-          <p class="text-gray-700 whitespace-pre-wrap">{{ product.description }}</p>
-        </AppCard>
-
-        <!-- Информация о партии -->
-        <AppCard v-if="product.batchInfo">
-          <h2 class="text-2xl font-semibold text-text mb-4">Информация о партии</h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <div class="text-sm text-gray-600 mb-1">Номер партии</div>
-              <div class="font-semibold">{{ product.batchInfo.batchNumber }}</div>
-            </div>
-            <div>
-              <div class="text-sm text-gray-600 mb-1">Дата производства</div>
-              <div class="font-semibold">{{ formatDate(product.batchInfo.productionDate) }}</div>
-            </div>
-            <div>
-              <div class="text-sm text-gray-600 mb-1">Срок годности</div>
-              <div class="font-semibold">{{ formatDate(product.batchInfo.expiryDate) }}</div>
-            </div>
-          </div>
-        </AppCard>
-
-        <!-- Результаты анализа -->
-        <AppCard v-if="product.analysisResults">
-          <h2 class="text-2xl font-semibold text-text mb-4">Результаты анализа</h2>
-
-          <div class="space-y-4">
-            <!-- Качество -->
-            <div>
-              <div class="text-sm text-gray-600 mb-1">Качество</div>
-              <div class="font-semibold">{{ product.analysisResults.quality }}</div>
-            </div>
-
-            <!-- Состав -->
-            <div>
-              <div class="text-sm text-gray-600 mb-2">Состав</div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div
-                  v-for="(value, key) in product.analysisResults.composition"
-                  :key="key"
-                  class="flex justify-between p-2 bg-gray-50 rounded"
-                >
-                  <span>{{ key }}</span>
-                  <span class="font-semibold">{{ value }}</span>
+        <!-- Список серий -->
+        <AppCard v-if="product.series && product.series.length > 0">
+          <h2 class="text-2xl font-semibold text-text mb-4">Серии ({{ product.series.length }})</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div
+              v-for="series in product.series"
+              :key="series.id"
+              class="p-4 border border-gray-300 rounded-lg hover:shadow-md transition-shadow"
+            >
+              <h3 class="font-semibold text-text mb-2">{{ series.title || `Серия #${series.id}` }}</h3>
+              <div class="space-y-1 text-sm text-gray-600">
+                <div v-if="series.amount !== null && series.amount !== undefined">
+                  <span class="font-medium">Количество:</span> {{ series.amount }} кг
+                </div>
+                <div v-if="series.shine_heated !== null && series.shine_heated !== undefined">
+                  <span class="font-medium">Блеск нагретый:</span> {{ series.shine_heated }}
+                </div>
+                <div v-if="series.conditional_viscosity !== null && series.conditional_viscosity !== undefined">
+                  <span class="font-medium">Условная вязкость:</span> {{ series.conditional_viscosity }}
+                </div>
+                <div v-if="series.appearance">
+                  <span class="font-medium">Внешний вид:</span> {{ series.appearance }}
                 </div>
               </div>
-            </div>
-
-            <!-- Сертификаты -->
-            <div v-if="product.analysisResults.certificates.length > 0">
-              <div class="text-sm text-gray-600 mb-2">Сертификаты</div>
-              <ul class="list-disc list-inside space-y-1">
-                <li
-                  v-for="(cert, index) in product.analysisResults.certificates"
-                  :key="index"
-                  class="text-gray-700"
-                >
-                  {{ cert }}
-                </li>
-              </ul>
             </div>
           </div>
         </AppCard>

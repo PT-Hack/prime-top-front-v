@@ -19,30 +19,33 @@ export const permissions = {
 
   // Может ли пользователь добавлять в избранное
   canAddToFavorites: (userRole: UserRole): boolean => {
-    return permissions.hasRole(userRole, UserRole.USER)
+    return permissions.hasAnyRole(userRole, [
+      UserRole.CLIENT_MANAGER,
+      UserRole.CLIENT_ADMIN,
+    ])
   },
 
   // Может ли пользователь добавлять в корзину
   canAddToCart: (userRole: UserRole): boolean => {
     return permissions.hasAnyRole(userRole, [
-      UserRole.COMPANY_MANAGER,
-      UserRole.COMPANY_ADMIN,
+      UserRole.CLIENT_MANAGER,
+      UserRole.CLIENT_ADMIN,
     ])
   },
 
   // Может ли пользователь создавать заказы
   canCreateOrders: (userRole: UserRole): boolean => {
     return permissions.hasAnyRole(userRole, [
-      UserRole.COMPANY_MANAGER,
-      UserRole.COMPANY_ADMIN,
+      UserRole.CLIENT_MANAGER,
+      UserRole.CLIENT_ADMIN,
     ])
   },
 
   // Может ли пользователь отменять заказы
   canCancelOrders: (userRole: UserRole): boolean => {
     return permissions.hasAnyRole(userRole, [
-      UserRole.COMPANY_MANAGER,
-      UserRole.COMPANY_ADMIN,
+      UserRole.CLIENT_MANAGER,
+      UserRole.CLIENT_ADMIN,
     ])
   },
 
@@ -56,12 +59,15 @@ export const permissions = {
 
   // Может ли пользователь создавать компанию
   canCreateCompany: (userRole: UserRole, hasCompany: boolean): boolean => {
-    return permissions.hasRole(userRole, UserRole.USER) && !hasCompany
+    return permissions.hasAnyRole(userRole, [
+      UserRole.CLIENT_MANAGER,
+      UserRole.CLIENT_ADMIN,
+    ]) && !hasCompany
   },
 
   // Может ли пользователь управлять компанией
   canManageCompany: (userRole: UserRole): boolean => {
-    return userRole === UserRole.COMPANY_ADMIN
+    return userRole === UserRole.CLIENT_ADMIN
   },
 
   // Может ли пользователь просматривать список компаний
@@ -79,22 +85,25 @@ export const permissions = {
 
   // Может ли пользователь писать в чат поддержки
   canChatWithSupport: (userRole: UserRole): boolean => {
-    return permissions.hasRole(userRole, UserRole.USER)
+    return permissions.hasAnyRole(userRole, [
+      UserRole.CLIENT_MANAGER,
+      UserRole.CLIENT_ADMIN,
+    ])
   },
 
   // Может ли пользователь писать в чат компании
   canChatWithCompany: (userRole: UserRole): boolean => {
     return permissions.hasAnyRole(userRole, [
-      UserRole.COMPANY_MANAGER,
-      UserRole.COMPANY_ADMIN,
+      UserRole.CLIENT_MANAGER,
+      UserRole.CLIENT_ADMIN,
     ])
   },
 
   // Может ли пользователь писать в чат по заказу
   canChatAboutOrder: (userRole: UserRole): boolean => {
     return permissions.hasAnyRole(userRole, [
-      UserRole.COMPANY_MANAGER,
-      UserRole.COMPANY_ADMIN,
+      UserRole.CLIENT_MANAGER,
+      UserRole.CLIENT_ADMIN,
       UserRole.SYSTEM_MANAGER,
       UserRole.SYSTEM_ADMIN,
     ])

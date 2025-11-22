@@ -1,45 +1,45 @@
-import type { Product } from './product.types'
+import type { Series } from './product.types'
+import type { User } from './auth.types'
 
 export enum OrderStatus {
-  NEW = 'new',
   PENDING = 'pending',
-  CONFIRMED = 'confirmed',
-  IN_PROGRESS = 'in_progress',
-  SHIPPED = 'shipped',
-  DELIVERED = 'delivered',
-  CANCELLED = 'cancelled',
+  ACCEPTED = 'accepted',
+  REJECTED = 'rejected',
+  CANCELED = 'canceled',
 }
 
-export interface OrderItem {
-  id: string
-  productId: string
-  product: Product
-  quantity: number
-  price: number
-  isFromStock: boolean
+export interface OrderSeries {
+  order_id: string
+  series_id: string
+  amount: number
+  series?: Series
 }
 
 export interface Order {
   id: string
-  companyId: string
-  companyName: string
-  createdBy: string
-  createdByName: string
-  assignedManager?: string
-  assignedManagerName?: string
+  date: string
+  user_id: string
+  company_id: string
   status: OrderStatus
-  items: OrderItem[]
-  total: number
-  createdAt: string
-  updatedAt: string
-  notes?: string
+  user?: User
+  series?: OrderSeries[]
+}
+
+export interface CreateOrderData {
+  company_id: string
+  user_id: string
+  series: Array<{
+    id: number
+    amount: number
+  }>
 }
 
 export interface OrderFilters {
   status?: OrderStatus[]
-  companyId?: string
-  dateFrom?: string
-  dateTo?: string
+  company_id?: string
+  user_id?: string
+  date_from?: string
+  date_to?: string
 }
 
 export interface OrdersState {

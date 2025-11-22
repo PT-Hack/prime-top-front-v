@@ -10,6 +10,7 @@ import { useToast } from '@/composables/useToast'
 import { companiesApi } from '@/services/api/companies.api'
 import { invitationsApi } from '@/services/api/invitations.api'
 import { usersApi } from '@/services/api/users.api'
+import { formatters } from '@/utils/formatters'
 import MainLayout from '@/components/layout/MainLayout.vue'
 import AppCard from '@/components/common/AppCard.vue'
 import AppButton from '@/components/common/AppButton.vue'
@@ -35,51 +36,49 @@ const cancellingInvitation = ref<string | null>(null)
 
 // Форма редактирования компании
 const companyForm = ref({
-  name: '',
-  ogrn: '',
-  inn: '',
-  kpp: '',
-  legalAddress: '',
-  actualAddress: '',
+  title: '',
+  OGRN: '',
+  INN: '',
+  KPP: '',
+  address: '',
   phone: '',
   email: '',
-  director: '',
+  checking_account: '',
+  bank_name: '',
+  BIK: '',
+  correspondent_account: '',
 })
 
 // Проверка прав
 const isCompanyAdmin = computed(() => {
-  return currentUser.value?.role === UserRole.COMPANY_ADMIN
+  return currentUser.value?.role?.title === UserRole.CLIENT_ADMIN
 })
 
 // Получить метку роли на русском
-const getRoleLabel = (role: UserRole): string => {
-  const labels: Record<UserRole, string> = {
-    guest: 'Гость',
-    user: 'Пользователь',
-    company_manager: 'Менеджер компании',
-    company_admin: 'Админ компании',
-    system_manager: 'Менеджер системы',
-    system_admin: 'Админ системы',
+const getRoleLabel = (roleTitle: string): string => {
+  const labels: Record<string, string> = {
+    'system-admin': 'Администратор системы',
+    'system-manager': 'Менеджер системы',
+    'client-admin': 'Клиент-админ',
+    'client-manager': 'Клиент-менеджер',
   }
-  return labels[role] || role
+  return labels[roleTitle] || roleTitle
 }
 
 // Получить цвет бейджа роли
-const getRoleBadgeColor = (role: UserRole): string => {
-  const colors: Record<UserRole, string> = {
-    guest: 'bg-gray-100 text-gray-800',
-    user: 'bg-blue-100 text-blue-800',
-    company_manager: 'bg-green-100 text-green-800',
-    company_admin: 'bg-purple-100 text-purple-800',
-    system_manager: 'bg-orange-100 text-orange-800',
-    system_admin: 'bg-red-100 text-red-800',
+const getRoleBadgeColor = (roleTitle: string): string => {
+  const colors: Record<string, string> = {
+    'system-admin': 'bg-red-100 text-red-800',
+    'system-manager': 'bg-orange-100 text-orange-800',
+    'client-admin': 'bg-purple-100 text-purple-800',
+    'client-manager': 'bg-green-100 text-green-800',
   }
-  return colors[role] || 'bg-gray-100 text-gray-800'
+  return colors[roleTitle] || 'bg-gray-100 text-gray-800'
 }
 
 // Загрузка компании
 const loadCompany = async () => {
-  if (!currentUser.value?.companyId) {
+  if (!currentUser.value?.company_id) {
     showToast('Вы не состоите в компании', 'warning')
     router.push('/profile')
     return
@@ -88,7 +87,7 @@ const loadCompany = async () => {
   loading.value = true
 
   try {
-    company.value = await companiesApi.getCompanyById(currentUser.value.companyId)
+    company.value = await companiesApi.getCompanyById(currentUser.value.company_id)
 
     if (!company.value) {
       showToast('Компания не найдена', 'error')
@@ -96,15 +95,17 @@ const loadCompany = async () => {
     } else {
       // Заполняем форму данными компании
       companyForm.value = {
-        name: company.value.name,
-        ogrn: company.value.ogrn,
-        inn: company.value.inn,
-        kpp: company.value.kpp,
-        legalAddress: company.value.legalAddress,
-        actualAddress: company.value.actualAddress,
+        title: company.value.title,
+        OGRN: company.value.OGRN,
+        INN: company.value.INN,
+        KPP: company.value.KPP,
+        address: company.value.address,
         phone: company.value.phone,
         email: company.value.email,
-        director: company.value.director,
+        checking_account: company.value.checking_account,
+        bank_name: company.value.bank_name,
+        BIK: company.value.BIK,
+        correspondent_account: company.value.correspondent_account,
       }
     }
   } catch (error) {
@@ -132,36 +133,14 @@ const handleSaveCompany = async () => {
   }
 }
 
-// Удалить участника
+// Удалить участника - функция недоступна в текущем API
 const handleRemoveMember = async (userId: string) => {
-  if (!company.value) return
-
-  if (!confirm('Вы уверены, что хотите удалить участника из компании?')) return
-
-  removingMember.value = userId
-
-  try {
-    company.value = await companiesApi.removeMember(company.value.id, userId)
-    showToast('Участник удалён из компании', 'success')
-  } catch (error: any) {
-    console.error('Ошибка удаления участника:', error)
-    showToast(error.message || 'Ошибка удаления участника', 'error')
-  } finally {
-    removingMember.value = null
-  }
+  showToast('Функция удаления участника будет доступна в следующей версии', 'info')
 }
 
-// Изменить роль участника
+// Изменить роль участника - функция недоступна в текущем API
 const handleChangeRole = async (userId: string, newRole: UserRole) => {
-  if (!company.value) return
-
-  try {
-    company.value = await companiesApi.updateMemberRole(company.value.id, userId, newRole)
-    showToast('Роль участника изменена', 'success')
-  } catch (error: any) {
-    console.error('Ошибка изменения роли:', error)
-    showToast(error.message || 'Ошибка изменения роли', 'error')
-  }
+  showToast('Функция изменения роли будет доступна в следующей версии', 'info')
 }
 
 // Открыть чат с участником (placeholder)
@@ -174,16 +153,16 @@ const handleOpenChat = (userId: string) => {
 const availableUsers = computed(() => {
   if (!company.value) return []
 
-  const memberIds = new Set(company.value.members.map((m) => m.userId))
+  const memberIds = new Set((company.value.users || []).map((u) => u.id))
   const invitedUserIds = new Set(
-    invitations.value.filter((inv) => inv.status === 'pending').map((inv) => inv.invitedUserId),
+    invitations.value.filter((inv) => inv.status === 'pending').map((inv) => inv.user_id),
   )
 
   return allUsers.value.filter(
     (user) =>
       !memberIds.has(user.id) && // Не является участником
       !invitedUserIds.has(user.id) && // Нет активного приглашения
-      !user.companyId && // Не состоит в другой компании
+      !user.company_id && // Не состоит в другой компании
       user.id !== currentUser.value?.id, // Не сам пользователь
   )
 })
@@ -194,11 +173,11 @@ const loadInvitationsAndUsers = async () => {
 
   try {
     const [invs, users] = await Promise.all([
-      invitationsApi.getCompanyInvitations(company.value.id),
+      invitationsApi.getUserInvitations(),
       usersApi.getUsers(),
     ])
 
-    invitations.value = invs.filter((inv) => inv.status === 'pending')
+    invitations.value = invs.filter((inv) => inv.status === 'pending' && inv.company_id === company.value!.id)
     allUsers.value = users
   } catch (error) {
     console.error('Ошибка загрузки данных:', error)
@@ -218,10 +197,9 @@ const handleSendInvitation = async () => {
   sendingInvitation.value = true
 
   try {
-    await invitationsApi.createInvitation(currentUser.value.id, {
-      companyId: company.value.id,
-      invitedUserId: selectedUserId.value,
-      message: invitationMessage.value,
+    await invitationsApi.createInvitation({
+      company_id: company.value.id,
+      user_id: selectedUserId.value,
     })
 
     showToast('Приглашение отправлено', 'success')
@@ -248,7 +226,7 @@ const handleCancelInvitation = async (invitationId: string) => {
   cancellingInvitation.value = invitationId
 
   try {
-    await invitationsApi.cancelInvitation(invitationId, currentUser.value.id)
+    await invitationsApi.updateInvitation(invitationId, { status: 'canceled' })
     showToast('Приглашение отменено', 'success')
 
     // Удаляем из списка
@@ -293,36 +271,16 @@ onMounted(() => {
         <!-- Информация о компании -->
         <AppCard>
           <div class="flex items-start justify-between mb-4">
-            <h2 class="text-2xl font-semibold text-text">{{ company.name }}</h2>
-            <div class="flex items-center gap-2">
-              <span
-                :class="[
-                  'px-3 py-1 rounded-full text-xs font-medium',
-                  company.status === 'active'
-                    ? 'bg-green-100 text-green-800'
-                    : company.status === 'pending'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-red-100 text-red-800',
-                ]"
-              >
-                {{
-                  company.status === 'active'
-                    ? 'Активна'
-                    : company.status === 'pending'
-                      ? 'На проверке'
-                      : 'Отклонена'
-                }}
-              </span>
-            </div>
+            <h2 class="text-2xl font-semibold text-text">{{ company.title }}</h2>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
               <div class="text-gray-500 mb-1">ОГРН</div>
-              <div v-if="!isCompanyAdmin" class="font-medium text-text">{{ company.ogrn }}</div>
+              <div v-if="!isCompanyAdmin" class="font-medium text-text">{{ company.OGRN }}</div>
               <input
                 v-else
-                v-model="companyForm.ogrn"
+                v-model="companyForm.OGRN"
                 type="text"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
@@ -330,10 +288,10 @@ onMounted(() => {
 
             <div>
               <div class="text-gray-500 mb-1">ИНН</div>
-              <div v-if="!isCompanyAdmin" class="font-medium text-text">{{ company.inn }}</div>
+              <div v-if="!isCompanyAdmin" class="font-medium text-text">{{ company.INN }}</div>
               <input
                 v-else
-                v-model="companyForm.inn"
+                v-model="companyForm.INN"
                 type="text"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
@@ -341,10 +299,10 @@ onMounted(() => {
 
             <div>
               <div class="text-gray-500 mb-1">КПП</div>
-              <div v-if="!isCompanyAdmin" class="font-medium text-text">{{ company.kpp }}</div>
+              <div v-if="!isCompanyAdmin" class="font-medium text-text">{{ company.KPP }}</div>
               <input
                 v-else
-                v-model="companyForm.kpp"
+                v-model="companyForm.KPP"
                 type="text"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
@@ -372,46 +330,61 @@ onMounted(() => {
               />
             </div>
 
+            <div class="md:col-span-2">
+              <div class="text-gray-500 mb-1">Адрес</div>
+              <div v-if="!isCompanyAdmin" class="font-medium text-text">
+                {{ company.address }}
+              </div>
+              <input
+                v-else
+                v-model="companyForm.address"
+                type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
             <div>
-              <div class="text-gray-500 mb-1">Директор</div>
-              <div v-if="!isCompanyAdmin" class="font-medium text-text">{{ company.director }}</div>
+              <div class="text-gray-500 mb-1">Расчетный счет</div>
+              <div v-if="!isCompanyAdmin" class="font-medium text-text">{{ company.checking_account }}</div>
               <input
                 v-else
-                v-model="companyForm.director"
+                v-model="companyForm.checking_account"
                 type="text"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
-            <div class="md:col-span-2">
-              <div class="text-gray-500 mb-1">Юридический адрес</div>
-              <div v-if="!isCompanyAdmin" class="font-medium text-text">
-                {{ company.legalAddress }}
-              </div>
+            <div>
+              <div class="text-gray-500 mb-1">Название банка</div>
+              <div v-if="!isCompanyAdmin" class="font-medium text-text">{{ company.bank_name }}</div>
               <input
                 v-else
-                v-model="companyForm.legalAddress"
+                v-model="companyForm.bank_name"
                 type="text"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
-            <div class="md:col-span-2">
-              <div class="text-gray-500 mb-1">Фактический адрес</div>
-              <div v-if="!isCompanyAdmin" class="font-medium text-text">
-                {{ company.actualAddress }}
-              </div>
+            <div>
+              <div class="text-gray-500 mb-1">БИК</div>
+              <div v-if="!isCompanyAdmin" class="font-medium text-text">{{ company.BIK }}</div>
               <input
                 v-else
-                v-model="companyForm.actualAddress"
+                v-model="companyForm.BIK"
                 type="text"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
-            <div class="md:col-span-2">
-              <div class="text-gray-500 mb-1">Дата создания</div>
-              <div class="font-medium text-text">{{ formatDate(company.createdAt) }}</div>
+            <div>
+              <div class="text-gray-500 mb-1">Корреспондентский счет</div>
+              <div v-if="!isCompanyAdmin" class="font-medium text-text">{{ company.correspondent_account }}</div>
+              <input
+                v-else
+                v-model="companyForm.correspondent_account"
+                type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
             </div>
           </div>
 
@@ -430,7 +403,7 @@ onMounted(() => {
         <AppCard>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold text-text">
-              Участники ({{ company.members.length }})
+              Участники ({{ company.users?.length || 0 }})
             </h2>
             <AppButton
               v-if="isCompanyAdmin"
@@ -442,57 +415,32 @@ onMounted(() => {
             </AppButton>
           </div>
 
-          <div v-if="company.members.length > 0" class="space-y-3">
+          <div v-if="company.users && company.users.length > 0" class="space-y-3">
             <div
-              v-for="member in company.members"
-              :key="member.userId"
+              v-for="user in company.users"
+              :key="user.id"
               class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <div class="flex-1">
                 <div class="flex items-center gap-3 mb-2">
-                  <h3 class="font-semibold text-text">{{ member.user.fullName }}</h3>
+                  <h3 class="font-semibold text-text">{{ formatters.fullName(user) }}</h3>
                   <span
-                    :class="['px-2 py-1 rounded text-xs font-medium', getRoleBadgeColor(member.role)]"
+                    v-if="user.role"
+                    :class="['px-2 py-1 rounded text-xs font-medium', getRoleBadgeColor(user.role.title)]"
                   >
-                    {{ getRoleLabel(member.role) }}
+                    {{ getRoleLabel(user.role.title) }}
                   </span>
                 </div>
 
                 <div class="text-sm text-gray-600">
-                  <div>Email: {{ member.user.email }}</div>
-                  <div>Присоединился: {{ formatDate(member.joinedAt) }}</div>
+                  <div>Email: {{ user.email }}</div>
                 </div>
               </div>
 
               <div class="flex items-center gap-2">
-                <AppButton variant="outline" size="sm" @click="handleOpenChat(member.userId)">
+                <AppButton variant="outline" size="sm" @click="handleOpenChat(user.id)">
                   Написать
                 </AppButton>
-
-                <div v-if="isCompanyAdmin && member.userId !== currentUser?.id">
-                  <!-- Изменение роли -->
-                  <select
-                    :value="member.role"
-                    @change="
-                      handleChangeRole(member.userId, ($event.target as HTMLSelectElement).value as UserRole)
-                    "
-                    class="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option :value="UserRole.COMPANY_MANAGER">Менеджер</option>
-                    <option :value="UserRole.COMPANY_ADMIN">Админ</option>
-                  </select>
-
-                  <!-- Удаление -->
-                  <AppButton
-                    variant="danger"
-                    size="sm"
-                    :loading="removingMember === member.userId"
-                    @click="handleRemoveMember(member.userId)"
-                    class="ml-2"
-                  >
-                    Удалить
-                  </AppButton>
-                </div>
               </div>
             </div>
           </div>
@@ -517,11 +465,12 @@ onMounted(() => {
               class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
             >
               <div class="flex-1">
-                <h3 class="font-semibold text-text mb-1">{{ invitation.invitedUser.fullName }}</h3>
+                <h3 class="font-semibold text-text mb-1">
+                  {{ invitation.user ? formatters.fullName(invitation.user) : `Пользователь #${invitation.user_id}` }}
+                </h3>
                 <div class="text-sm text-gray-600">
-                  <div>Email: {{ invitation.invitedUser.email }}</div>
-                  <div>Отправлено: {{ formatDate(invitation.createdAt) }}</div>
-                  <div v-if="invitation.message" class="mt-1 italic">{{ invitation.message }}</div>
+                  <div v-if="invitation.user">Email: {{ invitation.user.email }}</div>
+                  <div>ID пользователя: {{ invitation.user_id }}</div>
                 </div>
               </div>
 
@@ -573,7 +522,7 @@ onMounted(() => {
                   :key="user.id"
                   :value="user.id"
                 >
-                  {{ user.fullName }} ({{ user.email }})
+                  {{ formatters.fullName(user) }} ({{ user.email }})
                 </option>
               </select>
             </div>
